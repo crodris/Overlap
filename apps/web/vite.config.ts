@@ -13,7 +13,7 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
     tanstackStart(),
-    nitro({ preset: 'node' }),
+    nitro({ preset: 'node_server' }),
     viteReact(),
   ],
 })
