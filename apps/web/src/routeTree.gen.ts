@@ -8,141 +8,154 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RepositoriesRouteImport } from './routes/repositories'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories.$repoId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as SettingsImport } from './routes/settings'
-import { Route as RepositoriesImport } from './routes/repositories'
-import { Route as LoginImport } from './routes/login'
-import { Route as IndexImport } from './routes/index'
-import { Route as RepositoriesRepoIdImport } from './routes/repositories.$repoId'
-
-// Create/Update Routes
-
-const SettingsRoute = SettingsImport.update({
+const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const RepositoriesRoute = RepositoriesImport.update({
+const RepositoriesRoute = RepositoriesRouteImport.update({
   id: '/repositories',
   path: '/repositories',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const LoginRoute = LoginImport.update({
+const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
+  id: '/$repoId',
+  path: '/$repoId',
+  getParentRoute: () => RepositoriesRoute,
 } as any)
 
-const RepositoriesRepoIdRoute = RepositoriesRepoIdImport.update({
-  id: '/repositories/$repoId',
-  path: '/repositories/$repoId',
-  getParentRoute: () => rootRoute,
-} as any)
-
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/repositories': typeof RepositoriesRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/repositories': typeof RepositoriesRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/repositories': typeof RepositoriesRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/repositories'
+    | '/settings'
+    | '/repositories/$repoId'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/login' | '/repositories' | '/settings' | '/repositories/$repoId'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/repositories'
+    | '/settings'
+    | '/repositories/$repoId'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  RepositoriesRoute: typeof RepositoriesRouteWithChildren
+  SettingsRoute: typeof SettingsRoute
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginImport
-      parentRoute: typeof rootRoute
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/repositories': {
       id: '/repositories'
       path: '/repositories'
       fullPath: '/repositories'
-      preLoaderRoute: typeof RepositoriesImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof RepositoriesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsImport
-      parentRoute: typeof rootRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/repositories/$repoId': {
       id: '/repositories/$repoId'
-      path: '/repositories/$repoId'
+      path: '/$repoId'
       fullPath: '/repositories/$repoId'
-      preLoaderRoute: typeof RepositoriesRepoIdImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof RepositoriesRepoIdRouteImport
+      parentRoute: typeof RepositoriesRoute
     }
   }
 }
 
-// Create and export the route tree
-
-export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRoute
-  '/settings': typeof SettingsRoute
-  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRoute
-  '/settings': typeof SettingsRoute
-  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRoute
-  '/settings': typeof SettingsRoute
-  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/repositories' | '/settings' | '/repositories/$repoId'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/repositories' | '/settings' | '/repositories/$repoId'
-  id: '__root__' | '/' | '/login' | '/repositories' | '/settings' | '/repositories/$repoId'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  LoginRoute: typeof LoginRoute
-  RepositoriesRoute: typeof RepositoriesRoute
-  SettingsRoute: typeof SettingsRoute
+interface RepositoriesRouteChildren {
   RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
 }
+
+const RepositoriesRouteChildren: RepositoriesRouteChildren = {
+  RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
+}
+
+const RepositoriesRouteWithChildren = RepositoriesRoute._addFileChildren(
+  RepositoriesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  RepositoriesRoute: RepositoriesRoute,
+  RepositoriesRoute: RepositoriesRouteWithChildren,
   SettingsRoute: SettingsRoute,
-  RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
