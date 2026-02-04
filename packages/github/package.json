@@ -1,0 +1,25 @@
+{
+  "name": "@overlap/github",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./webhooks": "./src/webhooks.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.0",
+    "@octokit/auth-app": "^7.1.0",
+    "@octokit/webhooks": "^13.4.0",
+    "@overlap/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.7.0"
+  }
+}
