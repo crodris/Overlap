@@ -18,8 +18,9 @@ RUN pnpm install --frozen-lockfile
 # Build web app (Vite handles workspace dependencies)
 RUN pnpm --filter @overlap/web build
 
-# Expose port
-EXPOSE 3000
+# Set port for Nitro server (Railway will route traffic here)
+ENV PORT=8080
+EXPOSE 8080
 
 # Start the web app
 CMD ["pnpm", "--filter", "@overlap/web", "start"]
