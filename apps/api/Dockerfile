@@ -5,15 +5,17 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copy workspace files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# Copy workspace config files
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
+
+# Copy packages and app
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Build the API
+# Build API (tsup bundles workspace dependencies)
 RUN pnpm --filter @overlap/api build
 
 # Start the API
