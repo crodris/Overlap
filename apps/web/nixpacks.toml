@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20", "pnpm"]
 
 [phases.install]
-cmds = ["cd ../.. && pnpm install --frozen-lockfile"]
+cmds = ["pnpm install --frozen-lockfile"]
 
 [phases.build]
-cmds = ["cd ../.. && pnpm --filter @overlap/web build"]
+cmds = ["pnpm --filter @overlap/web build"]
 
 [start]
-cmd = "cd ../.. && pnpm --filter @overlap/web start"
+cmd = "pnpm --filter @overlap/web start"
