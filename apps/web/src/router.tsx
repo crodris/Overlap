@@ -1,8 +1,10 @@
-import { createRouter as createTanStackRouter } from '@tanstack/react-router'
+import { createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 
-export function createRouter() {
-  const router = createTanStackRouter({
+// TanStack Start requires a getRouter export that returns
+// a new router instance each time (used for SSR isolation)
+export function getRouter() {
+  const router = createRouter({
     routeTree,
     defaultPreload: 'intent',
     scrollRestoration: true,
@@ -11,17 +13,8 @@ export function createRouter() {
   return router
 }
 
-let router: ReturnType<typeof createRouter> | undefined
-
-export function getRouter() {
-  if (!router) {
-    router = createRouter()
-  }
-  return router
-}
-
 declare module '@tanstack/react-router' {
   interface Register {
-    router: ReturnType<typeof createRouter>
+    router: ReturnType<typeof getRouter>
   }
 }
