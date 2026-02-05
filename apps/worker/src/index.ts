@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import { Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { QUEUE_NAMES, RATE_LIMITS } from '@overlap/shared'

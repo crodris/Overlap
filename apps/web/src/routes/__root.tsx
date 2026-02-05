@@ -37,7 +37,7 @@ function RootComponent() {
       <body className="min-h-screen bg-background antialiased">
         <div className="flex min-h-screen">
           {/* Sidebar */}
-          <aside className="w-64 border-r bg-card">
+          <aside className="sticky top-0 h-screen w-64 border-r bg-card relative">
             <div className="flex h-16 items-center border-b px-6">
               <Link to="/" className="flex items-center gap-2 font-semibold">
                 <GitBranch className="h-6 w-6 text-overlap-primary" />

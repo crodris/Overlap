@@ -17,9 +17,9 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@overlap/shared": "workspace:*",
     "drizzle-orm": "^0.38.0",
-    "postgres": "^3.4.0",
-    "@overlap/shared": "workspace:*"
+    "postgres": "^3.4.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.0",

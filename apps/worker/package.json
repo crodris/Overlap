@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
@@ -17,8 +17,7 @@
     "minimatch": "^10.0.0",
     "@overlap/db": "workspace:*",
     "@overlap/shared": "workspace:*",
-    "@overlap/github": "workspace:*",
-    "dotenv": "^16.4.0"
+    "@overlap/github": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
