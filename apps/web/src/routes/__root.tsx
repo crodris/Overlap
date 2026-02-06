@@ -9,8 +9,9 @@ import {
 import * as React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
-import { GitBranch, Settings, LayoutDashboard, LogOut } from 'lucide-react'
+import { GitBranch, Settings, LayoutDashboard, LogOut, Moon, Sun } from 'lucide-react'
 import { useAuth } from '~/hooks/use-auth'
+import { useTheme } from '~/hooks/use-theme'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,7 @@ function RootComponent() {
     <html lang="en">
       <head>
         <HeadContent />
+        <script src="/theme-init.js" />
       </head>
       <body className="min-h-screen bg-background antialiased">
         <QueryClientProvider client={queryClient}>
@@ -75,6 +77,7 @@ function AppLayout() {
 
 function Sidebar() {
   const { logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <aside className="sticky top-0 h-screen w-64 border-r bg-card relative">
@@ -95,7 +98,18 @@ function Sidebar() {
           Settings
         </NavLink>
       </nav>
-      <div className="absolute bottom-0 w-64 border-t p-4">
+      <div className="absolute bottom-0 w-64 border-t p-4 space-y-1">
+        <button
+          onClick={toggleTheme}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </button>
         <button
           onClick={logout}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
