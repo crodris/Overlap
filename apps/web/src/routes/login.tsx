@@ -1,8 +1,9 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { GitBranch, Github, Shield, Zap, Users } from 'lucide-react'
+import { GitBranch, Github, Shield, Zap, Users, Moon, Sun } from 'lucide-react'
 import { useAuth } from '~/hooks/use-auth'
+import { useTheme } from '~/hooks/use-theme'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -10,6 +11,7 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   if (isLoading) return null
 
@@ -22,7 +24,18 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted p-4 relative">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        {theme === 'dark' ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )}
+        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+      </button>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
