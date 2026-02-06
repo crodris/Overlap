@@ -7,11 +7,13 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
-import { GitBranch, Settings, LayoutDashboard, LogOut, Moon, Sun } from 'lucide-react'
+import { GitBranch, Settings, LayoutDashboard, LogOut, Moon, Sun, ChevronDown } from 'lucide-react'
 import { useAuth } from '~/hooks/use-auth'
 import { useTheme } from '~/hooks/use-theme'
+import { api } from '~/lib/api'
+import { cn } from '~/lib/utils'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +82,14 @@ function AppLayout() {
 function Sidebar() {
   const { logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const [reposExpanded, setReposExpanded] = React.useState(true)
+  const routerState = useRouterState()
+  const isReposActive = routerState.location.pathname.startsWith('/repositories')
+
+  const { data: repositories } = useQuery({
+    queryKey: ['repositories'],
+    queryFn: api.getRepositories,
+  })
 
   return (
     <aside className="sticky top-0 h-screen w-64 border-r bg-card relative">
@@ -93,9 +103,66 @@ function Sidebar() {
         <NavLink to="/" icon={<LayoutDashboard className="h-4 w-4" />}>
           Dashboard
         </NavLink>
-        <NavLink to="/repositories" icon={<GitBranch className="h-4 w-4" />}>
-          Repositories
-        </NavLink>
+
+        {/* Repositories accordion */}
+        <div>
+          <div className="flex items-center">
+            <Link
+              to="/repositories"
+              className={cn(
+                'flex flex-1 items-center gap-3 rounded-md rounded-r-none px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
+                isReposActive && 'bg-accent text-accent-foreground',
+              )}
+            >
+              <GitBranch className="h-4 w-4" />
+              Repositories
+            </Link>
+            <button
+              onClick={() => setReposExpanded((prev) => !prev)}
+              className={cn(
+                'rounded-md rounded-l-none px-2 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
+                isReposActive && 'bg-accent text-accent-foreground',
+              )}
+            >
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  !reposExpanded && '-rotate-90',
+                )}
+              />
+            </button>
+          </div>
+
+          {reposExpanded && repositories && repositories.length > 0 && (
+            <div className="ml-6 mt-1 space-y-0.5 border-l pl-3">
+              {repositories.map((repo) => {
+                const repoName = repo.fullName.split('/').pop() ?? repo.fullName
+                return (
+                  <Link
+                    key={repo.id}
+                    to="/repositories/$repoId"
+                    params={{ repoId: repo.id }}
+                    className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    activeProps={{
+                      className: 'bg-accent text-accent-foreground',
+                    }}
+                  >
+                    <span className="truncate">{repoName}</span>
+                    <span
+                      className={cn(
+                        'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium text-white',
+                        repo.activeOverlaps > 0 ? 'bg-destructive' : 'bg-black dark:bg-zinc-700',
+                      )}
+                    >
+                      {repo.activeOverlaps}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         <NavLink to="/settings" icon={<Settings className="h-4 w-4" />}>
           Settings
         </NavLink>
