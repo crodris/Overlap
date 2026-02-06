@@ -110,7 +110,7 @@ function DashboardContent() {
                   <div className="flex items-center gap-4">
                     {repo.activeOverlaps > 0 ? (
                       <Badge variant="destructive">
-                        {repo.activeOverlaps} overlaps
+                        {repo.activeOverlaps} {repo.activeOverlaps === 1 ? 'overlap' : 'overlaps'}
                       </Badge>
                     ) : (
                       <Badge variant="secondary">No overlaps</Badge>

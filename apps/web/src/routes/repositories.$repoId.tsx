@@ -121,7 +121,7 @@ function RepositoryDetailContent() {
                         {branchOverlaps.length > 0 ? (
                           <Badge variant="destructive">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            {branchOverlaps.length} overlaps
+                            {branchOverlaps.length} {branchOverlaps.length === 1 ? 'overlap' : 'overlaps'}
                           </Badge>
                         ) : (
                           <Badge variant="secondary">
