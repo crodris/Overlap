@@ -364,12 +364,13 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
               {(error as Error).message || 'Failed to load diffs'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-x">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_3px_1fr]">
               <DiffPanel
                 branchName={leftBranch.name}
                 defaultBranch={defaultBranch}
                 diff={findDiff(leftDiffs.data, selectedFile)}
               />
+              <div className="hidden md:block bg-border" />
               <DiffPanel
                 branchName={rightBranch.name}
                 defaultBranch={defaultBranch}
@@ -424,7 +425,7 @@ function DiffPanel({
   diff: { filename: string; status: string; additions: number; deletions: number; changes: number; patch: string | null; previousFilename?: string } | undefined
 }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 bg-background">
       <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b">
         <code className="text-xs font-medium truncate">{branchName}</code>
         <span className="text-xs text-muted-foreground shrink-0">vs {defaultBranch}</span>
