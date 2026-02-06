@@ -7,7 +7,7 @@ import { Button } from '~/components/ui/button'
 import { Skeleton } from '~/components/ui/skeleton'
 import { useToast } from '~/components/ui/toast'
 import { DiffViewer } from '~/components/diff-viewer'
-import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X, Bell } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, ChevronRight, X, Bell } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { useAuth } from '~/hooks/use-auth'
 import { api } from '~/lib/api'
@@ -322,19 +322,20 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
         <p className="text-sm text-muted-foreground mb-2">
           {overlap.fileCount} overlapping {overlap.fileCount === 1 ? 'file' : 'files'}:
         </p>
-        <div className="max-h-48 overflow-y-auto space-y-0.5">
+        <div className="max-h-48 overflow-y-auto space-y-1">
           {overlap.files.map((file) => (
             <button
               key={file.filePath}
               type="button"
               onClick={() => setSelectedFile(selectedFile === file.filePath ? null : file.filePath)}
               aria-expanded={selectedFile === file.filePath}
-              className={`flex items-center gap-1.5 w-full text-left px-1.5 py-1 rounded text-xs transition-colors ${
+              className={`flex items-center gap-1.5 w-full text-left px-2 py-1.5 rounded-md border text-xs transition-colors ${
                 selectedFile === file.filePath
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  ? 'bg-accent text-foreground border-border'
+                  : 'text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted hover:border-border'
               }`}
             >
+              <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${selectedFile === file.filePath ? 'rotate-90' : ''}`} />
               <FileCode className="h-3 w-3 shrink-0" />
               <code className="truncate">{file.filePath}</code>
             </button>
