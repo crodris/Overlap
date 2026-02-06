@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { db, users, githubAppInstallations } from '@overlap/db'
+import { db, users, githubAppInstallations, repositories, repositorySettings } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { githubOAuthCallbackSchema } from '@overlap/shared'
 import { requireAuth } from '../plugins/auth.js'
@@ -38,21 +38,25 @@ export async function authRoute(fastify: FastifyInstance) {
     return reply.redirect(`https://github.com/login/oauth/authorize?${params}`)
   })
 
-  // GitHub OAuth callback
-  fastify.get<{ Querystring: { code?: string; state?: string } }>(
+  // GitHub OAuth callback (handles both our OAuth flow and GitHub App installation flow)
+  fastify.get<{ Querystring: { code?: string; state?: string; setup_action?: string } }>(
     '/github/callback',
     async (request, reply) => {
       const { code, state } = githubOAuthCallbackSchema.parse(request.query)
+      const isInstallationFlow = (request.query as Record<string, string>).setup_action === 'install'
 
-      // Verify state (CSRF protection)
-      const stateCookie = request.cookies.oauth_state
-      if (!stateCookie) {
-        return reply.status(400).send({ error: 'Missing OAuth state cookie' })
-      }
+      // Verify state (CSRF protection) — skip for installation flow
+      // since it originates from GitHub's UI, not our /auth/github endpoint
+      if (!isInstallationFlow) {
+        const stateCookie = request.cookies.oauth_state
+        if (!stateCookie) {
+          return reply.status(400).send({ error: 'Missing OAuth state cookie' })
+        }
 
-      const unsigned = request.unsignCookie(stateCookie)
-      if (!unsigned.valid || unsigned.value !== state) {
-        return reply.status(400).send({ error: 'Invalid OAuth state' })
+        const unsigned = request.unsignCookie(stateCookie)
+        if (!unsigned.valid || unsigned.value !== state) {
+          return reply.status(400).send({ error: 'Invalid OAuth state' })
+        }
       }
 
       // Exchange code for access token
@@ -131,6 +135,9 @@ export async function authRoute(fastify: FastifyInstance) {
       // Clear oauth_state cookie
       reply.clearCookie('oauth_state', { path: '/' })
 
+      // Sync user's GitHub App installations into local DB
+      await syncUserInstallations(tokenData.access_token, user.id)
+
       // Check if user has installations
       const installation = await db.query.githubAppInstallations.findFirst({
         where: and(
@@ -167,4 +174,109 @@ export async function authRoute(fastify: FastifyInstance) {
     reply.clearCookie('session', { path: '/' })
     return { success: true }
   })
+}
+
+async function syncUserInstallations(accessToken: string, userId: string) {
+  try {
+    const res = await fetch('https://api.github.com/user/installations', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/vnd.github+json',
+      },
+    })
+
+    if (!res.ok) return
+
+    const data = (await res.json()) as {
+      installations: Array<{
+        id: number
+        account: { login: string; type: string }
+      }>
+    }
+
+    for (const inst of data.installations) {
+      const [installation] = await db
+        .insert(githubAppInstallations)
+        .values({
+          installationId: inst.id,
+          userId,
+          status: 'active',
+        })
+        .onConflictDoUpdate({
+          target: githubAppInstallations.installationId,
+          set: {
+            userId,
+            status: 'active',
+            updatedAt: new Date(),
+          },
+        })
+        .returning()
+
+      // Sync repos for this installation
+      await syncInstallationRepos(accessToken, inst.id, installation.id)
+    }
+  } catch (err) {
+    console.error('Failed to sync installations:', err)
+  }
+}
+
+async function syncInstallationRepos(accessToken: string, installationId: number, dbInstallationId: string) {
+  try {
+    const res = await fetch(
+      `https://api.github.com/user/installations/${installationId}/repositories`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/vnd.github+json',
+        },
+      }
+    )
+
+    if (!res.ok) return
+
+    const data = (await res.json()) as {
+      repositories: Array<{
+        id: number
+        name: string
+        full_name: string
+        private: boolean
+        default_branch: string
+      }>
+    }
+
+    for (const repo of data.repositories) {
+      const [inserted] = await db
+        .insert(repositories)
+        .values({
+          githubId: repo.id,
+          installationId: dbInstallationId,
+          name: repo.name,
+          fullName: repo.full_name,
+          defaultBranch: repo.default_branch,
+          isPrivate: repo.private,
+          isActive: true,
+        })
+        .onConflictDoUpdate({
+          target: repositories.githubId,
+          set: {
+            installationId: dbInstallationId,
+            name: repo.name,
+            fullName: repo.full_name,
+            defaultBranch: repo.default_branch,
+            isPrivate: repo.private,
+            isActive: true,
+            updatedAt: new Date(),
+          },
+        })
+        .returning()
+
+      // Ensure default settings exist
+      await db
+        .insert(repositorySettings)
+        .values({ repositoryId: inserted.id })
+        .onConflictDoNothing()
+    }
+  } catch (err) {
+    console.error(`Failed to sync repos for installation ${installationId}:`, err)
+  }
 }

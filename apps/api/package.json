@@ -11,16 +11,17 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "fastify": "^5.0.0",
+    "@fastify/cookie": "^11.0.0",
     "@fastify/cors": "^10.0.0",
     "@fastify/rate-limit": "^10.0.0",
-    "@fastify/cookie": "^11.0.0",
+    "@overlap/db": "workspace:*",
+    "@overlap/github": "workspace:*",
+    "@overlap/shared": "workspace:*",
     "bullmq": "^5.25.0",
     "drizzle-orm": "^0.38.0",
-    "ioredis": "^5.4.0",
-    "@overlap/db": "workspace:*",
-    "@overlap/shared": "workspace:*",
-    "@overlap/github": "workspace:*"
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
