@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { DiffViewer } from '~/components/diff-viewer'
-import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X, Bell } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { useAuth } from '~/hooks/use-auth'
 import { api } from '~/lib/api'
@@ -207,6 +207,10 @@ interface OverlapCardProps {
 function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, onIgnore, isUpdating }: OverlapCardProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
+  const testNotify = useMutation({
+    mutationFn: () => api.testNotify(repoId, overlap.id),
+  })
+
   // Auto-orient: put the logged-in user's branch on the left
   const userOwnsTarget = userGithubId != null && overlap.targetBranch.lastPusherGithubId === userGithubId
   const userOwnsSource = userGithubId != null && overlap.sourceBranch.lastPusherGithubId === userGithubId
@@ -346,6 +350,18 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
         >
           Ignore
         </Button>
+        {import.meta.env.DEV && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => testNotify.mutate()}
+            disabled={testNotify.isPending}
+            className="ml-auto text-muted-foreground"
+          >
+            <Bell className="h-3 w-3 mr-1" />
+            {testNotify.isPending ? 'Sending...' : testNotify.isSuccess ? 'Sent!' : 'Test Notify'}
+          </Button>
+        )}
       </div>
     </div>
   )

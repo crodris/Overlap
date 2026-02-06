@@ -69,13 +69,15 @@ export async function pushNotificationProcessor(job: Job<PushNotificationJob>) {
   }
 
   // Build notification payload
-  const sourceName = overlap.sourceBranch.name
-  const targetName = overlap.targetBranch.name
+  // Orient so the recipient's branch appears first (same as UI auto-orient)
+  const isRecipientSource = overlap.sourceBranchId === targetBranchId
+  const yourBranch = isRecipientSource ? overlap.sourceBranch.name : overlap.targetBranch.name
+  const otherBranch = isRecipientSource ? overlap.targetBranch.name : overlap.sourceBranch.name
   const fileCount = overlap.files.length
 
   const payload = JSON.stringify({
-    title: 'Overlap detected',
-    body: `${sourceName} overlaps with your branch ${targetName} — ${fileCount} file${fileCount !== 1 ? 's' : ''}`,
+    title: `Overlap Detected · ${fileCount} file${fileCount !== 1 ? 's' : ''}`,
+    body: `${yourBranch} ↔ ${otherBranch}`,
     url: `${APP_URL}/repositories/${repositoryId}`,
     tag: `overlap-${overlapId}`,
   })
