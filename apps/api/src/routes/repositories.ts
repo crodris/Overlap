@@ -154,7 +154,7 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       if (!includeStale) {
         const staleDate = new Date()
         staleDate.setDate(staleDate.getDate() - 14)
-        conditions.push(sql`${branches.lastSeenAt} > ${staleDate}`)
+        conditions.push(sql`${branches.lastSeenAt} > ${staleDate.toISOString()}`)
       }
 
       const branchList = await db.query.branches.findMany({
