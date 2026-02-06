@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import fp from 'fastify-plugin'
 import cookie from '@fastify/cookie'
 import { db, users } from '@overlap/db'
 import { eq } from 'drizzle-orm'
@@ -15,7 +16,7 @@ declare module 'fastify' {
   }
 }
 
-export async function authPlugin(fastify: FastifyInstance) {
+export const authPlugin = fp(async function authPlugin(fastify: FastifyInstance) {
   const sessionSecret = process.env.SESSION_SECRET
   if (!sessionSecret) {
     throw new Error('SESSION_SECRET environment variable is required')
@@ -59,7 +60,7 @@ export async function authPlugin(fastify: FastifyInstance) {
       }
     }
   })
-}
+})
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   if (!request.user) {
