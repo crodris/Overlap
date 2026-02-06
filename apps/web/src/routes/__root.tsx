@@ -41,8 +41,10 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const { theme } = useTheme()
+
   return (
-    <html lang="en">
+    <html lang="en" className={theme === 'dark' ? 'dark' : ''} suppressHydrationWarning>
       <head>
         <HeadContent />
         <script src="/theme-init.js" />
