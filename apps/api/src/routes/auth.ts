@@ -38,25 +38,24 @@ export async function authRoute(fastify: FastifyInstance) {
     return reply.redirect(`https://github.com/login/oauth/authorize?${params}`)
   })
 
-  // GitHub OAuth callback (handles both our OAuth flow and GitHub App installation flow)
+  // GitHub OAuth callback
   fastify.get<{ Querystring: { code?: string; state?: string; setup_action?: string } }>(
     '/github/callback',
     async (request, reply) => {
+      // If this callback came from a GitHub App installation flow (no state cookie),
+      // redirect through our own OAuth flow to establish CSRF protection.
+      // GitHub will auto-approve since the user already authorized.
+      const stateCookie = request.cookies.oauth_state
+      if (!stateCookie) {
+        return reply.redirect(`${apiUrl}/auth/github`)
+      }
+
       const { code, state } = githubOAuthCallbackSchema.parse(request.query)
-      const isInstallationFlow = (request.query as Record<string, string>).setup_action === 'install'
 
-      // Verify state (CSRF protection) — skip for installation flow
-      // since it originates from GitHub's UI, not our /auth/github endpoint
-      if (!isInstallationFlow) {
-        const stateCookie = request.cookies.oauth_state
-        if (!stateCookie) {
-          return reply.status(400).send({ error: 'Missing OAuth state cookie' })
-        }
-
-        const unsigned = request.unsignCookie(stateCookie)
-        if (!unsigned.valid || unsigned.value !== state) {
-          return reply.status(400).send({ error: 'Invalid OAuth state' })
-        }
+      // Verify state (CSRF protection) — always enforced
+      const unsigned = request.unsignCookie(stateCookie)
+      if (!unsigned.valid || unsigned.value !== state) {
+        return reply.status(400).send({ error: 'Invalid OAuth state' })
       }
 
       // Exchange code for access token
