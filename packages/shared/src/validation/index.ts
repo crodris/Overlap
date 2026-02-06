@@ -83,6 +83,10 @@ export const pushEventSchema = z.object({
     default_branch: z.string(),
     private: z.boolean(),
   }),
+  sender: z.object({
+    id: z.number(),
+    login: z.string(),
+  }),
   installation: z.object({
     id: z.number(),
   }),
@@ -135,6 +139,10 @@ export const installationEventSchema = z.object({
       type: z.enum(['User', 'Organization']),
       avatar_url: z.string().optional(),
     }),
+  }),
+  sender: z.object({
+    id: z.number(),
+    login: z.string(),
   }),
   repositories: z
     .array(

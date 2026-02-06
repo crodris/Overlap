@@ -219,3 +219,9 @@ export interface MaintenanceJob {
   type: 'prune_branches' | 'cleanup_events' | 'sync_repository'
   repositoryId?: string
 }
+
+export interface PushNotificationJob {
+  repositoryId: string
+  overlapId: string
+  targetBranchId: string
+}

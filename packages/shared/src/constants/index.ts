@@ -8,6 +8,7 @@ export const QUEUE_NAMES = {
   OVERLAP_DETECTION: 'overlap-detection',
   GITHUB_FEEDBACK: 'github-feedback',
   MAINTENANCE: 'maintenance',
+  PUSH_NOTIFICATION: 'push-notification',
 } as const
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
@@ -22,6 +23,7 @@ export const RATE_LIMITS = {
   [QUEUE_NAMES.OVERLAP_DETECTION]: { max: 50, duration: 1000 }, // 50/sec
   [QUEUE_NAMES.GITHUB_FEEDBACK]: { max: 10, duration: 60000 }, // 10/min
   [QUEUE_NAMES.MAINTENANCE]: { max: 5, duration: 60000 }, // 5/min
+  [QUEUE_NAMES.PUSH_NOTIFICATION]: { max: 20, duration: 1000 }, // 20/sec
 } as const
 
 // ============================================================================
