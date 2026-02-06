@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { GitBranch, Lock, Globe, ExternalLink, Loader2 } from 'lucide-react'
+import { GitBranch, Lock, Globe, ChevronRight, Loader2 } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { api } from '~/lib/api'
 
@@ -76,12 +76,12 @@ function RepositoriesContent() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link to="/repositories/$repoId" params={{ repoId: repo.id }}>
-                    <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/repositories/$repoId" params={{ repoId: repo.id }}>
                       View Details
-                      <ExternalLink className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -90,13 +90,13 @@ function RepositoriesContent() {
                     <span className="text-2xl font-bold">{repo.activeBranches}</span>
                     <span className="text-sm text-muted-foreground">active branches</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">{repo.activeOverlaps}</span>
-                    <span className="text-sm text-muted-foreground">overlaps</span>
-                    {repo.activeOverlaps > 0 && (
-                      <Badge variant="destructive">{repo.activeOverlaps}</Badge>
-                    )}
-                  </div>
+                  {repo.activeOverlaps > 0 ? (
+                    <Badge variant="destructive">
+                      {repo.activeOverlaps} {repo.activeOverlaps === 1 ? 'overlap' : 'overlaps'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">No overlaps</Badge>
+                  )}
                   {repo.lastSyncedAt && (
                     <div className="ml-auto text-sm text-muted-foreground">
                       Last synced: {formatRelativeTime(new Date(repo.lastSyncedAt))}

@@ -7,7 +7,7 @@ import { ArrowLeft, GitBranch, AlertTriangle, CheckCircle, Loader2 } from 'lucid
 import { ProtectedRoute } from '~/components/protected-route'
 import { api } from '~/lib/api'
 
-export const Route = createFileRoute('/repositories/$repoId')({
+export const Route = createFileRoute('/repositories_/$repoId')({
   component: RepositoryDetailPage,
 })
 

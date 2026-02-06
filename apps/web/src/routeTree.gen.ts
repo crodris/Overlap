@@ -13,7 +13,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RepositoriesRouteImport } from './routes/repositories'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories.$repoId'
+import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories_.$repoId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -36,22 +36,22 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
-  id: '/$repoId',
-  path: '/$repoId',
-  getParentRoute: () => RepositoriesRoute,
+  id: '/repositories_/$repoId',
+  path: '/repositories/$repoId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRouteWithChildren
+  '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRouteWithChildren
+  '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
 }
@@ -59,9 +59,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/repositories': typeof RepositoriesRouteWithChildren
+  '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
-  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+  '/repositories_/$repoId': typeof RepositoriesRepoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -79,14 +79,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/repositories'
     | '/settings'
-    | '/repositories/$repoId'
+    | '/repositories_/$repoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  RepositoriesRoute: typeof RepositoriesRouteWithChildren
+  RepositoriesRoute: typeof RepositoriesRoute
   SettingsRoute: typeof SettingsRoute
+  RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -119,33 +120,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/repositories/$repoId': {
-      id: '/repositories/$repoId'
-      path: '/$repoId'
+    '/repositories_/$repoId': {
+      id: '/repositories_/$repoId'
+      path: '/repositories/$repoId'
       fullPath: '/repositories/$repoId'
       preLoaderRoute: typeof RepositoriesRepoIdRouteImport
-      parentRoute: typeof RepositoriesRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface RepositoriesRouteChildren {
-  RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
-}
-
-const RepositoriesRouteChildren: RepositoriesRouteChildren = {
-  RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
-}
-
-const RepositoriesRouteWithChildren = RepositoriesRoute._addFileChildren(
-  RepositoriesRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  RepositoriesRoute: RepositoriesRouteWithChildren,
+  RepositoriesRoute: RepositoriesRoute,
   SettingsRoute: SettingsRoute,
+  RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

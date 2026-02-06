@@ -32,5 +32,6 @@ pnpm-debug.log*
 # Testing
 coverage
 
-# Drizzle
+# Database
 drizzle/*.sql
+prod_dump.sql
