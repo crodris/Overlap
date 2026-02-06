@@ -22,7 +22,7 @@ export async function authRoute(fastify: FastifyInstance) {
     reply.setCookie('oauth_state', state, {
       signed: true,
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 600, // 10 minutes
@@ -124,7 +124,7 @@ export async function authRoute(fastify: FastifyInstance) {
         {
           signed: true,
           httpOnly: true,
-          sameSite: 'lax',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
           secure: process.env.NODE_ENV === 'production',
           path: '/',
           maxAge: 60 * 60 * 24 * 7, // 7 days
