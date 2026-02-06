@@ -135,7 +135,7 @@ async function processPushEvent(payload: Record<string, unknown>) {
       installationId: repo.installation.installationId,
     },
     {
-      jobId: `${repo.id}:${branchName}:${parsed.after}`,
+      jobId: `${repo.id}-${branchName}-${parsed.after}`,
     }
   )
 
@@ -149,7 +149,7 @@ async function processPushEvent(payload: Record<string, unknown>) {
         triggeredBy: 'push',
       },
       {
-        jobId: `${repo.id}:${branchId}:${Date.now()}`,
+        jobId: `${repo.id}-${branchId}-${Date.now()}`,
         delay: 5000, // Small delay to ensure sync completes first
       }
     )
@@ -228,7 +228,7 @@ async function processPullRequestEvent(payload: Record<string, unknown>) {
         triggeredBy: 'push',
       },
       {
-        jobId: `${repo.id}:${branch.id}:pr:${parsed.number}`,
+        jobId: `${repo.id}-${branch.id}-pr-${parsed.number}`,
       }
     )
   }
@@ -336,7 +336,7 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
               repositoryId: inserted.id,
             },
             {
-              jobId: `sync_repository:${inserted.id}`,
+              jobId: `sync_repository-${inserted.id}`,
             }
           )
         }
@@ -415,7 +415,7 @@ async function processInstallationRepositoriesEvent(payload: Record<string, unkn
           repositoryId: inserted.id,
         },
         {
-          jobId: `sync_repository:${inserted.id}`,
+          jobId: `sync_repository-${inserted.id}`,
         }
       )
     }

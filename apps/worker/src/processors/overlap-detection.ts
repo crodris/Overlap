@@ -180,7 +180,7 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
 
     if (shouldNotify) {
       // Use a timestamp suffix so reactivated overlaps aren't deduplicated by BullMQ
-      const jobSuffix = wasReactivated ? `:${Date.now()}` : ''
+      const jobSuffix = wasReactivated ? `-${Date.now()}` : ''
 
       // Find any open PRs for this branch
       const openPRs = await db.query.pullRequests.findMany({
@@ -200,7 +200,7 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
             alertType: 'check_run',
           },
           {
-            jobId: `${pr.id}:${overlapId}${jobSuffix}`,
+            jobId: `${pr.id}-${overlapId}${jobSuffix}`,
           }
         )
       }
@@ -215,7 +215,7 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
           targetBranchId: detected.targetBranchId,
         },
         {
-          jobId: `push:${overlapId}:${detected.targetBranchId}${jobSuffix}`,
+          jobId: `push-${overlapId}-${detected.targetBranchId}${jobSuffix}`,
         }
       )
     }

@@ -317,7 +317,7 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
             targetBranchId: overlap.targetBranchId,
           },
           {
-            jobId: `test:${overlapId}:${Date.now()}`,
+            jobId: `test-${overlapId}-${Date.now()}`,
           }
         )
 
