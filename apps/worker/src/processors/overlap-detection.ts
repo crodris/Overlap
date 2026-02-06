@@ -118,11 +118,13 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
     let overlapId: string
     let isNew = false
     let severityIncreased = false
+    let wasReactivated = false
 
     if (existingOverlap) {
       // Update existing overlap
       const oldSeverity = existingOverlap.severity
       severityIncreased = compareSeverity(severity, oldSeverity as typeof severity) > 0
+      wasReactivated = existingOverlap.status === 'resolved' || existingOverlap.status === 'ignored'
 
       await db
         .update(overlaps)
@@ -169,11 +171,17 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
     )
 
     // Check if we should send notifications
+    // Notify on: new overlaps, severity increases, or reactivated overlaps
+    // (previously resolved/ignored but the file was edited again)
     const shouldNotify =
       (isNew && branch.repository.settings?.notifyOnNewOverlap !== false) ||
-      (severityIncreased && branch.repository.settings?.notifyOnSeverityIncrease !== false)
+      (severityIncreased && branch.repository.settings?.notifyOnSeverityIncrease !== false) ||
+      wasReactivated
 
     if (shouldNotify) {
+      // Use a timestamp suffix so reactivated overlaps aren't deduplicated by BullMQ
+      const jobSuffix = wasReactivated ? `:${Date.now()}` : ''
+
       // Find any open PRs for this branch
       const openPRs = await db.query.pullRequests.findMany({
         where: and(
@@ -192,7 +200,7 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
             alertType: 'check_run',
           },
           {
-            jobId: `${pr.id}:${overlapId}`,
+            jobId: `${pr.id}:${overlapId}${jobSuffix}`,
           }
         )
       }
@@ -207,7 +215,7 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
           targetBranchId: detected.targetBranchId,
         },
         {
-          jobId: `push:${overlapId}:${detected.targetBranchId}`,
+          jobId: `push:${overlapId}:${detected.targetBranchId}${jobSuffix}`,
         }
       )
     }
