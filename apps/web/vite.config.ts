@@ -24,7 +24,7 @@ export default defineConfig({
     nitro({
       preset: 'node_server',
       routeRules: {
-        '/auth/**': { proxy: `${apiUrl}/auth/**` },
+        '/auth/**': { proxy: { to: `${apiUrl}/auth/**`, fetchOptions: { redirect: 'manual' } } },
         '/api/**': { proxy: `${apiUrl}/api/**` },
       },
     }),
