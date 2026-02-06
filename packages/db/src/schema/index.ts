@@ -31,18 +31,6 @@ export const users = pgTable(
   (table) => [uniqueIndex('users_github_id_idx').on(table.githubId)]
 )
 
-export const oauthTokens = pgTable('oauth_tokens', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  accessToken: text('access_token').notNull(), // encrypted
-  refreshToken: text('refresh_token'), // encrypted
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
-
 // ============================================================================
 // Organizations & Installations
 // ============================================================================
@@ -132,6 +120,7 @@ export const branches = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     sha: varchar('sha', { length: 40 }).notNull(),
     isDefault: boolean('is_default').notNull().default(false),
+    lastPusherGithubId: bigint('last_pusher_github_id', { mode: 'number' }),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -288,22 +277,34 @@ export const webhookEvents = pgTable(
 )
 
 // ============================================================================
+// Push Subscriptions
+// ============================================================================
+
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('push_subscriptions_user_id_idx').on(table.userId),
+    uniqueIndex('push_subscriptions_user_endpoint_idx').on(table.userId, table.endpoint),
+  ]
+)
+
+// ============================================================================
 // Relations
 // ============================================================================
 
-export const usersRelations = relations(users, ({ many, one }) => ({
-  oauthTokens: one(oauthTokens, {
-    fields: [users.id],
-    references: [oauthTokens.userId],
-  }),
+export const usersRelations = relations(users, ({ many }) => ({
   installations: many(githubAppInstallations),
-}))
-
-export const oauthTokensRelations = relations(oauthTokens, ({ one }) => ({
-  user: one(users, {
-    fields: [oauthTokens.userId],
-    references: [users.id],
-  }),
+  pushSubscriptions: many(pushSubscriptions),
 }))
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -415,5 +416,12 @@ export const webhookEventsRelations = relations(webhookEvents, ({ one }) => ({
   repository: one(repositories, {
     fields: [webhookEvents.repositoryId],
     references: [repositories.id],
+  }),
+}))
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [pushSubscriptions.userId],
+    references: [users.id],
   }),
 }))

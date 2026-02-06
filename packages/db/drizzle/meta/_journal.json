@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1770329250641,
+      "tag": "0000_woozy_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770336616509,
+      "tag": "0001_drop_oauth_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770337486234,
+      "tag": "0002_purple_agent_zero",
+      "breakpoints": true
+    }
+  ]
+}
