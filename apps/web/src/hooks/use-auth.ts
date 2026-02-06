@@ -1,10 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '~/lib/api'
-import { useRouter } from '@tanstack/react-router'
 
 export function useAuth() {
   const queryClient = useQueryClient()
-  const router = useRouter()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['auth', 'me'],
@@ -17,9 +15,12 @@ export function useAuth() {
   const isUnauthorized = error instanceof ApiError && error.status === 401
 
   const logout = async () => {
-    await api.logout()
-    queryClient.clear()
-    router.navigate({ to: '/login' })
+    try {
+      await api.logout()
+    } finally {
+      queryClient.clear()
+      window.location.href = '/login'
+    }
   }
 
   return {
