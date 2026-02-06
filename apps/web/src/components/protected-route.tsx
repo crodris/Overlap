@@ -3,7 +3,7 @@ import { useAuth } from '~/hooks/use-auth'
 import { Button } from '~/components/ui/button'
 import { GitBranch, Loader2 } from 'lucide-react'
 
-const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG || 'overlap-crod951'
+const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG || 'overlap-connector'
 const INSTALL_URL = `https://github.com/apps/${GITHUB_APP_SLUG}/installations/new`
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
