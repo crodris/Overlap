@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { DiffViewer } from '~/components/diff-viewer'
-import { ArrowLeft, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
+import { useAuth } from '~/hooks/use-auth'
 import { api } from '~/lib/api'
 
 export const Route = createFileRoute('/repositories_/$repoId')({
@@ -24,6 +25,7 @@ function RepositoryDetailPage() {
 function RepositoryDetailContent() {
   const { repoId } = Route.useParams()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ['repository', repoId],
@@ -67,7 +69,13 @@ function RepositoryDetailContent() {
     )
   }
 
-  const branches = branchList ?? []
+  const userGithubId = user?.githubId ?? null
+
+  const branches = [...(branchList ?? [])].sort((a, b) => {
+    const aIsUser = a.lastPusherGithubId === userGithubId ? 1 : 0
+    const bIsUser = b.lastPusherGithubId === userGithubId ? 1 : 0
+    return bIsUser - aIsUser
+  })
   const overlaps = overlapList ?? []
 
   return (
@@ -164,6 +172,7 @@ function RepositoryDetailContent() {
                     overlap={overlap}
                     repoId={repoId}
                     defaultBranch={repo.defaultBranch}
+                    userGithubId={userGithubId}
                     onResolve={() => updateOverlap.mutate({ overlapId: overlap.id, status: 'resolved' })}
                     onIgnore={() => updateOverlap.mutate({ overlapId: overlap.id, status: 'ignored' })}
                     isUpdating={updateOverlap.isPending}
@@ -181,60 +190,78 @@ function RepositoryDetailContent() {
 interface OverlapCardProps {
   overlap: {
     id: string
-    sourceBranch: { id: string; name: string }
-    targetBranch: { id: string; name: string }
+    sourceBranch: { id: string; name: string; lastPusherGithubId: number | null }
+    targetBranch: { id: string; name: string; lastPusherGithubId: number | null }
     fileCount: number
     severity: string
     files: Array<{ filePath: string }>
   }
   repoId: string
   defaultBranch: string
+  userGithubId: number | null
   onResolve: () => void
   onIgnore: () => void
   isUpdating: boolean
 }
 
-function OverlapCard({ overlap, repoId, defaultBranch, onResolve, onIgnore, isUpdating }: OverlapCardProps) {
+function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, onIgnore, isUpdating }: OverlapCardProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
-  const sourceDiffs = useQuery({
-    queryKey: ['compare-diffs', repoId, overlap.sourceBranch.name, defaultBranch],
+  // Auto-orient: put the logged-in user's branch on the left
+  const userOwnsTarget = userGithubId != null && overlap.targetBranch.lastPusherGithubId === userGithubId
+  const userOwnsSource = userGithubId != null && overlap.sourceBranch.lastPusherGithubId === userGithubId
+  const autoSwapped = userOwnsTarget && !userOwnsSource
+  const [manualSwap, setManualSwap] = useState(false)
+  const swapped = autoSwapped !== manualSwap // XOR: manual toggle flips the auto state
+
+  const leftBranch = swapped ? overlap.targetBranch : overlap.sourceBranch
+  const rightBranch = swapped ? overlap.sourceBranch : overlap.targetBranch
+
+  const leftDiffs = useQuery({
+    queryKey: ['compare-diffs', repoId, leftBranch.name, defaultBranch],
     queryFn: () =>
       api.getCompareDiffs(repoId, {
         base: defaultBranch,
-        head: overlap.sourceBranch.name,
+        head: leftBranch.name,
       }),
     staleTime: 60_000,
   })
 
-  const targetDiffs = useQuery({
-    queryKey: ['compare-diffs', repoId, overlap.targetBranch.name, defaultBranch],
+  const rightDiffs = useQuery({
+    queryKey: ['compare-diffs', repoId, rightBranch.name, defaultBranch],
     queryFn: () =>
       api.getCompareDiffs(repoId, {
         base: defaultBranch,
-        head: overlap.targetBranch.name,
+        head: rightBranch.name,
       }),
     staleTime: 60_000,
   })
 
   const findDiff = (
-    data: typeof sourceDiffs.data,
+    data: typeof leftDiffs.data,
     filePath: string
   ) => data?.files.find((f) => f.filename === filePath || f.previousFilename === filePath)
 
-  const isLoading = sourceDiffs.isLoading || targetDiffs.isLoading
-  const error = sourceDiffs.error || targetDiffs.error
+  const isLoading = leftDiffs.isLoading || rightDiffs.isLoading
+  const error = leftDiffs.error || rightDiffs.error
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <code className="text-sm bg-muted px-2 py-0.5 rounded">
-            {overlap.sourceBranch.name}
+            {leftBranch.name}
           </code>
-          <span className="text-muted-foreground">&amp;</span>
+          <button
+            type="button"
+            onClick={() => setManualSwap(!manualSwap)}
+            className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+            title="Swap branch positions"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+          </button>
           <code className="text-sm bg-muted px-2 py-0.5 rounded">
-            {overlap.targetBranch.name}
+            {rightBranch.name}
           </code>
         </div>
         <Badge variant={overlap.severity as 'low' | 'medium' | 'high' | 'critical'}>
@@ -288,14 +315,14 @@ function OverlapCard({ overlap, repoId, defaultBranch, onResolve, onIgnore, isUp
           ) : (
             <div className="grid grid-cols-2 divide-x">
               <DiffPanel
-                branchName={overlap.sourceBranch.name}
+                branchName={leftBranch.name}
                 defaultBranch={defaultBranch}
-                diff={findDiff(sourceDiffs.data, selectedFile)}
+                diff={findDiff(leftDiffs.data, selectedFile)}
               />
               <DiffPanel
-                branchName={overlap.targetBranch.name}
+                branchName={rightBranch.name}
                 defaultBranch={defaultBranch}
-                diff={findDiff(targetDiffs.data, selectedFile)}
+                diff={findDiff(rightDiffs.data, selectedFile)}
               />
             </div>
           )}

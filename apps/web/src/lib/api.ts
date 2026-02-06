@@ -99,6 +99,7 @@ export const api = {
         name: string
         sha: string
         isDefault: boolean
+        lastPusherGithubId: number | null
         lastSeenAt: string
       }>
     >(`/api/repositories/${id}/branches${qs}`)
@@ -109,8 +110,8 @@ export const api = {
     return request<
       Array<{
         id: string
-        sourceBranch: { id: string; name: string }
-        targetBranch: { id: string; name: string }
+        sourceBranch: { id: string; name: string; lastPusherGithubId: number | null }
+        targetBranch: { id: string; name: string; lastPusherGithubId: number | null }
         fileCount: number
         severity: string
         status: string
