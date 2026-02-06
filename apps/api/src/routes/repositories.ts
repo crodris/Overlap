@@ -288,4 +288,41 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       return updated
     }
   )
+
+  // DEV ONLY: Test push notification for an existing overlap
+  if (process.env.NODE_ENV !== 'production') {
+    fastify.post<{ Params: { id: string; overlapId: string } }>(
+      '/:id/overlaps/:overlapId/test-notify',
+      async (request, reply) => {
+        const { id } = repositoryIdParamSchema.parse(request.params)
+        const overlapId = request.params.overlapId
+
+        const repo = await requireRepoAccess(request, reply, id)
+        if (!repo) return
+
+        const overlap = await db.query.overlaps.findFirst({
+          where: and(eq(overlaps.id, overlapId), eq(overlaps.repositoryId, id)),
+          with: { sourceBranch: true, targetBranch: true },
+        })
+
+        if (!overlap) {
+          return reply.status(404).send({ error: 'Overlap not found' })
+        }
+
+        await fastify.queues.pushNotification.add(
+          'notify',
+          {
+            repositoryId: id,
+            overlapId,
+            targetBranchId: overlap.targetBranchId,
+          },
+          {
+            jobId: `test:${overlapId}:${Date.now()}`,
+          }
+        )
+
+        return { success: true, message: 'Test notification queued' }
+      }
+    )
+  }
 }

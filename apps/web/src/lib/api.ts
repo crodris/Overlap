@@ -154,6 +154,13 @@ export const api = {
       method: 'DELETE',
       body: JSON.stringify({ endpoint }),
     }),
+
+  // DEV ONLY
+  testNotify: (repoId: string, overlapId: string) =>
+    request<{ success: boolean; message: string }>(
+      `/api/repositories/${repoId}/overlaps/${overlapId}/test-notify`,
+      { method: 'POST' }
+    ),
 }
 
 export { ApiError }

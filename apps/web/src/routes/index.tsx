@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Skeleton } from '~/components/ui/skeleton'
 import { GitBranch, AlertTriangle, GitPullRequest, Clock, Loader2 } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { NotificationPrompt } from '~/components/notification-prompt'
@@ -20,15 +22,58 @@ function DashboardPage() {
 }
 
 function DashboardContent() {
-  const { data: repos, isLoading } = useQuery({
+  const { data: repos, isLoading, isError } = useQuery({
     queryKey: ['repositories'],
     queryFn: api.getRepositories,
   })
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="p-4 md:p-8">
+        <div className="mb-8">
+          <Skeleton className="h-9 w-48 mb-2" />
+          <Skeleton className="h-5 w-72" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-4 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-7 w-32 mb-1" />
+            <Skeleton className="h-5 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 md:p-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-lg font-medium mb-2">Failed to load dashboard</h3>
+            <p className="text-muted-foreground mb-4">Something went wrong loading your repositories.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -42,7 +87,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <NotificationPrompt />
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -79,9 +124,12 @@ function DashboardContent() {
           <CardContent className="py-12 text-center">
             <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No repositories yet</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Repositories will appear here once they're synced from your GitHub App installation.
             </p>
+            <Button asChild variant="outline">
+              <Link to="/settings">Go to Settings</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
