@@ -76,10 +76,7 @@ function SettingsContent() {
                   <User className="h-8 w-8 text-muted-foreground" />
                 </div>
               )}
-              <div>
-                <p className="font-medium">@{user?.username ?? 'unknown'}</p>
-                <p className="text-sm text-muted-foreground">{user?.email ?? 'No email'}</p>
-              </div>
+              <p className="font-medium">@{user?.username ?? 'unknown'}</p>
             </div>
           </CardContent>
         </Card>
