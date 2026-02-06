@@ -22,7 +22,7 @@ export async function authRoute(fastify: FastifyInstance) {
     reply.setCookie('oauth_state', state, {
       signed: true,
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 600, // 10 minutes
@@ -30,7 +30,7 @@ export async function authRoute(fastify: FastifyInstance) {
 
     const params = new URLSearchParams({
       client_id: clientId,
-      redirect_uri: `${apiUrl}/auth/github/callback`,
+      redirect_uri: `${appUrl}/auth/github/callback`,
       scope: 'read:user user:email',
       state,
     })
@@ -47,7 +47,7 @@ export async function authRoute(fastify: FastifyInstance) {
       // GitHub will auto-approve since the user already authorized.
       const stateCookie = request.cookies.oauth_state
       if (!stateCookie) {
-        return reply.redirect(`${apiUrl}/auth/github`)
+        return reply.redirect(`${appUrl}/auth/github`)
       }
 
       const { code, state } = githubOAuthCallbackSchema.parse(request.query)
@@ -124,7 +124,7 @@ export async function authRoute(fastify: FastifyInstance) {
         {
           signed: true,
           httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
           path: '/',
           maxAge: 60 * 60 * 24 * 7, // 7 days
