@@ -343,7 +343,19 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
       }
     }
   } else if (parsed.action === 'deleted') {
-    // Mark installation as deleted (cascade will handle repos)
+    // Find the installation record first
+    const existing = await db.query.githubAppInstallations.findFirst({
+      where: eq(githubAppInstallations.installationId, parsed.installation.id),
+    })
+
+    if (existing) {
+      // Remove user-installation links for this installation
+      await db
+        .delete(userInstallations)
+        .where(eq(userInstallations.installationId, existing.id))
+    }
+
+    // Mark installation as deleted
     await db
       .update(githubAppInstallations)
       .set({ status: 'deleted', updatedAt: new Date() })

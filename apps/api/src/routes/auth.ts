@@ -137,13 +137,14 @@ export async function authRoute(fastify: FastifyInstance) {
       // Sync user's GitHub App installations into local DB
       await syncUserInstallations(tokenData.access_token, user.id)
 
-      // Check if user has installations
-      const userInst = await db.query.userInstallations.findFirst({
+      // Check if user has any active installations
+      const userInsts = await db.query.userInstallations.findMany({
         where: eq(userInstallations.userId, user.id),
         with: { installation: true },
       })
+      const hasActive = userInsts.some(ui => ui.installation.status === 'active')
 
-      if (!userInst || userInst.installation.status !== 'active') {
+      if (!hasActive) {
         return reply.redirect(`${appUrl}?setup=1`)
       }
 
@@ -153,14 +154,15 @@ export async function authRoute(fastify: FastifyInstance) {
 
   // Get current user
   fastify.get('/me', { preHandler: [requireAuth] }, async (request) => {
-    const userInst = await db.query.userInstallations.findFirst({
+    const userInsts = await db.query.userInstallations.findMany({
       where: eq(userInstallations.userId, request.user!.id),
       with: { installation: true },
     })
+    const hasActive = userInsts.some(ui => ui.installation.status === 'active')
 
     return {
       user: request.user,
-      hasInstallations: !!userInst && userInst.installation.status === 'active',
+      hasInstallations: hasActive,
     }
   })
 
