@@ -1,15 +1,23 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { GitBranch, Github, Shield, Zap, Users } from 'lucide-react'
+import { useAuth } from '~/hooks/use-auth'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
 })
 
 function LoginPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) return null
+
+  if (isAuthenticated) {
+    return <Navigate to="/" />
+  }
+
   const handleGitHubLogin = () => {
-    // Redirect to GitHub OAuth
     window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/auth/github`
   }
 

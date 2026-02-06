@@ -1,50 +1,44 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
-import { GitBranch, AlertTriangle, GitPullRequest, Clock } from 'lucide-react'
+import { GitBranch, AlertTriangle, GitPullRequest, Clock, Loader2 } from 'lucide-react'
+import { ProtectedRoute } from '~/components/protected-route'
+import { api } from '~/lib/api'
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
 })
 
 function DashboardPage() {
-  // Mock data for demo - will be replaced with actual API calls
-  const stats = {
-    repositories: 5,
-    activeBranches: 23,
-    activeOverlaps: 7,
-    recentAlerts: 3,
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
+  )
+}
+
+function DashboardContent() {
+  const { data: repos, isLoading } = useQuery({
+    queryKey: ['repositories'],
+    queryFn: api.getRepositories,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
-  const recentOverlaps = [
-    {
-      id: '1',
-      repository: 'acme/frontend',
-      sourceBranch: 'feature/auth',
-      targetBranch: 'feature/dashboard',
-      fileCount: 4,
-      severity: 'high' as const,
-      detectedAt: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
-    },
-    {
-      id: '2',
-      repository: 'acme/frontend',
-      sourceBranch: 'feature/api-v2',
-      targetBranch: 'bugfix/login',
-      fileCount: 2,
-      severity: 'medium' as const,
-      detectedAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    },
-    {
-      id: '3',
-      repository: 'acme/backend',
-      sourceBranch: 'feature/payments',
-      targetBranch: 'feature/subscriptions',
-      fileCount: 8,
-      severity: 'critical' as const,
-      detectedAt: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-    },
-  ]
+  const repositories = repos ?? []
+
+  const stats = {
+    repositories: repositories.length,
+    activeBranches: repositories.reduce((sum, r) => sum + r.activeBranches, 0),
+    activeOverlaps: repositories.reduce((sum, r) => sum + r.activeOverlaps, 0),
+  }
 
   return (
     <div className="p-8">
@@ -56,7 +50,7 @@ function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <StatsCard
           title="Repositories"
           value={stats.repositories}
@@ -75,57 +69,62 @@ function DashboardPage() {
           description="Detected conflicts"
           icon={<AlertTriangle className="h-4 w-4 text-overlap-warning" />}
         />
-        <StatsCard
-          title="Recent Alerts"
-          value={stats.recentAlerts}
-          description="Last 24 hours"
-          icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-        />
       </div>
 
-      {/* Recent Overlaps */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Overlaps</CardTitle>
-          <CardDescription>
-            Latest detected file overlaps between branches
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentOverlaps.map((overlap) => (
-              <div
-                key={overlap.id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {overlap.repository}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="rounded bg-muted px-2 py-0.5 text-sm">
-                      {overlap.sourceBranch}
-                    </code>
-                    <span className="text-muted-foreground">&</span>
-                    <code className="rounded bg-muted px-2 py-0.5 text-sm">
-                      {overlap.targetBranch}
-                    </code>
+      {/* Repositories summary */}
+      {repositories.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No repositories yet</h3>
+            <p className="text-muted-foreground">
+              Repositories will appear here once they're synced from your GitHub App installation.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Repositories</CardTitle>
+            <CardDescription>
+              Your connected repositories and their overlap status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {repositories.map((repo) => (
+                <Link
+                  key={repo.id}
+                  to="/repositories/$repoId"
+                  params={{ repoId: repo.id }}
+                  className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">{repo.fullName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {repo.activeBranches} branches
+                    </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {overlap.fileCount} files
-                  </span>
-                  <Badge variant={overlap.severity}>{overlap.severity}</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {formatRelativeTime(overlap.detectedAt)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="flex items-center gap-4">
+                    {repo.activeOverlaps > 0 ? (
+                      <Badge variant="destructive">
+                        {repo.activeOverlaps} overlaps
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">No overlaps</Badge>
+                    )}
+                    {repo.lastSyncedAt && (
+                      <span className="text-sm text-muted-foreground">
+                        {formatRelativeTime(new Date(repo.lastSyncedAt))}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

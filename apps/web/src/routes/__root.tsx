@@ -4,10 +4,21 @@ import {
   Scripts,
   createRootRoute,
   Outlet,
+  useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
 import { GitBranch, Settings, LayoutDashboard, LogOut } from 'lucide-react'
+import { useAuth } from '~/hooks/use-auth'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 export const Route = createRootRoute({
   head: () => ({
@@ -35,42 +46,65 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background antialiased">
-        <div className="flex min-h-screen">
-          {/* Sidebar */}
-          <aside className="sticky top-0 h-screen w-64 border-r bg-card relative">
-            <div className="flex h-16 items-center border-b px-6">
-              <Link to="/" className="flex items-center gap-2 font-semibold">
-                <GitBranch className="h-6 w-6 text-overlap-primary" />
-                <span className="text-xl">Overlap</span>
-              </Link>
-            </div>
-            <nav className="space-y-1 p-4">
-              <NavLink to="/" icon={<LayoutDashboard className="h-4 w-4" />}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/repositories" icon={<GitBranch className="h-4 w-4" />}>
-                Repositories
-              </NavLink>
-              <NavLink to="/settings" icon={<Settings className="h-4 w-4" />}>
-                Settings
-              </NavLink>
-            </nav>
-            <div className="absolute bottom-0 w-64 border-t p-4">
-              <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <main className="flex-1 overflow-auto">
-            <Outlet />
-          </main>
-        </div>
+        <QueryClientProvider client={queryClient}>
+          <AppLayout />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function AppLayout() {
+  const routerState = useRouterState()
+  const isLoginPage = routerState.location.pathname === '/login'
+
+  if (isLoginPage) {
+    return <Outlet />
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+function Sidebar() {
+  const { logout } = useAuth()
+
+  return (
+    <aside className="sticky top-0 h-screen w-64 border-r bg-card relative">
+      <div className="flex h-16 items-center border-b px-6">
+        <Link to="/" className="flex items-center gap-2 font-semibold">
+          <GitBranch className="h-6 w-6 text-overlap-primary" />
+          <span className="text-xl">Overlap</span>
+        </Link>
+      </div>
+      <nav className="space-y-1 p-4">
+        <NavLink to="/" icon={<LayoutDashboard className="h-4 w-4" />}>
+          Dashboard
+        </NavLink>
+        <NavLink to="/repositories" icon={<GitBranch className="h-4 w-4" />}>
+          Repositories
+        </NavLink>
+        <NavLink to="/settings" icon={<Settings className="h-4 w-4" />}>
+          Settings
+        </NavLink>
+      </nav>
+      <div className="absolute bottom-0 w-64 border-t p-4">
+        <button
+          onClick={logout}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
+      </div>
+    </aside>
   )
 }
 
