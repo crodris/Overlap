@@ -1,6 +1,6 @@
-import type { FastifyInstance } from 'fastify'
-import { db, repositories, branches, overlaps, repositorySettings } from '@overlap/db'
-import { eq, and, desc, count, sql } from 'drizzle-orm'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { db, repositories, branches, overlaps, repositorySettings, githubAppInstallations } from '@overlap/db'
+import { eq, and, desc, count, sql, inArray } from 'drizzle-orm'
 import {
   repositoryIdParamSchema,
   repositorySettingsUpdateSchema,
@@ -8,12 +8,55 @@ import {
   overlapQuerySchema,
   overlapUpdateSchema,
 } from '@overlap/shared'
+import { requireAuth } from '../plugins/auth.js'
 
 export async function repositoriesRoute(fastify: FastifyInstance) {
-  // List repositories
+  // All repository routes require authentication
+  fastify.addHook('preHandler', requireAuth)
+
+  // Helper to get user's installation IDs
+  async function getUserInstallationIds(userId: string): Promise<string[]> {
+    const installations = await db.query.githubAppInstallations.findMany({
+      where: and(
+        eq(githubAppInstallations.userId, userId),
+        eq(githubAppInstallations.status, 'active')
+      ),
+      columns: { id: true },
+    })
+    return installations.map((i) => i.id)
+  }
+
+  // Helper to verify the authenticated user has access to a repository
+  async function requireRepoAccess(request: FastifyRequest, reply: FastifyReply, repoId: string) {
+    const installationIds = await getUserInstallationIds(request.user!.id)
+    const repo = await db.query.repositories.findFirst({
+      where: and(
+        eq(repositories.id, repoId),
+        installationIds.length > 0
+          ? inArray(repositories.installationId, installationIds)
+          : sql`false`
+      ),
+    })
+    if (!repo) {
+      reply.status(404).send({ error: 'Repository not found' })
+      return null
+    }
+    return repo
+  }
+
+  // List repositories (scoped to user's installations)
   fastify.get('/', async (request, reply) => {
+    const installationIds = await getUserInstallationIds(request.user!.id)
+
+    if (installationIds.length === 0) {
+      return []
+    }
+
     const repos = await db.query.repositories.findMany({
-      where: eq(repositories.isActive, true),
+      where: and(
+        eq(repositories.isActive, true),
+        inArray(repositories.installationId, installationIds)
+      ),
       with: {
         settings: true,
       },
@@ -50,11 +93,14 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
     return results
   })
 
-  // Get repository by ID
+  // Get repository by ID (scoped to user's installations)
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const { id } = repositoryIdParamSchema.parse(request.params)
+    const repo = await requireRepoAccess(request, reply, id)
+    if (!repo) return
 
-    const repo = await db.query.repositories.findFirst({
+    // Re-query with relations for the detail view
+    const repoWithRelations = await db.query.repositories.findFirst({
       where: eq(repositories.id, id),
       with: {
         settings: true,
@@ -62,11 +108,7 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       },
     })
 
-    if (!repo) {
-      return reply.status(404).send({ error: 'Repository not found' })
-    }
-
-    return repo
+    return repoWithRelations
   })
 
   // Update repository settings
@@ -76,13 +118,8 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       const { id } = repositoryIdParamSchema.parse(request.params)
       const updates = repositorySettingsUpdateSchema.parse(request.body)
 
-      const repo = await db.query.repositories.findFirst({
-        where: eq(repositories.id, id),
-      })
-
-      if (!repo) {
-        return reply.status(404).send({ error: 'Repository not found' })
-      }
+      const repo = await requireRepoAccess(request, reply, id)
+      if (!repo) return
 
       const [updated] = await db
         .update(repositorySettings)
@@ -106,13 +143,8 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
         request.query
       )
 
-      const repo = await db.query.repositories.findFirst({
-        where: eq(repositories.id, id),
-      })
-
-      if (!repo) {
-        return reply.status(404).send({ error: 'Repository not found' })
-      }
+      const repo = await requireRepoAccess(request, reply, id)
+      if (!repo) return
 
       const conditions = [eq(branches.repositoryId, id)]
 
@@ -146,13 +178,8 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
         request.query
       )
 
-      const repo = await db.query.repositories.findFirst({
-        where: eq(repositories.id, id),
-      })
-
-      if (!repo) {
-        return reply.status(404).send({ error: 'Repository not found' })
-      }
+      const repo = await requireRepoAccess(request, reply, id)
+      if (!repo) return
 
       const conditions = [eq(overlaps.repositoryId, id)]
 
@@ -193,6 +220,9 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       const { id } = repositoryIdParamSchema.parse(request.params)
       const overlapId = request.params.overlapId
       const { status } = overlapUpdateSchema.parse(request.body)
+
+      const repo = await requireRepoAccess(request, reply, id)
+      if (!repo) return
 
       const overlap = await db.query.overlaps.findFirst({
         where: and(eq(overlaps.id, overlapId), eq(overlaps.repositoryId, id)),
