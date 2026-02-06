@@ -84,7 +84,8 @@ export function DiffViewer({ filename, status, additions, deletions, patch, prev
       </div>
 
       {/* Diff body */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="relative">
+      <div className="max-h-[32rem] overflow-y-auto scrollbar-thin">
         {isBinary ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             Binary file changed
@@ -100,6 +101,7 @@ export function DiffViewer({ filename, status, additions, deletions, patch, prev
                 <tr
                   key={i}
                   className={cn(
+                    'hover:brightness-95 dark:hover:brightness-110',
                     line.type === 'add' && 'bg-diff-add',
                     line.type === 'remove' && 'bg-diff-remove',
                     line.type === 'hunk' && 'bg-diff-hunk'
@@ -108,7 +110,7 @@ export function DiffViewer({ filename, status, additions, deletions, patch, prev
                   {line.type === 'hunk' ? (
                     <td
                       colSpan={3}
-                      className="px-3 py-1.5 text-diff-hunk-foreground select-none"
+                      className="px-3 py-2 text-diff-hunk-foreground select-none font-medium border-y border-border/30"
                     >
                       {line.content}
                     </td>
@@ -139,6 +141,7 @@ export function DiffViewer({ filename, status, additions, deletions, patch, prev
             </tbody>
           </table>
         )}
+      </div>
       </div>
     </div>
   )

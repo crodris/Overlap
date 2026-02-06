@@ -8,6 +8,7 @@ import { User, Bell, Shield, Loader2 } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { useAuth } from '~/hooks/use-auth'
 import { usePushNotifications } from '~/hooks/use-push-notifications'
+import { useToast } from '~/components/ui/toast'
 import { api } from '~/lib/api'
 
 export const Route = createFileRoute('/settings')({
@@ -26,6 +27,7 @@ function SettingsContent() {
   const { user } = useAuth()
   const { isSupported, isSubscribed, subscribe, unsubscribe } = usePushNotifications()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const { data: repos } = useQuery({
     queryKey: ['repositories'],
@@ -37,13 +39,17 @@ function SettingsContent() {
       api.updateRepositorySettings(repoId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
+      toast('Settings saved')
+    },
+    onError: () => {
+      toast('Failed to save settings', 'error')
     },
   })
 
   const repositories = repos ?? []
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-3xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
@@ -177,26 +183,27 @@ function RepoSettings({
       <h4 className="font-medium">{repo.fullName}</h4>
 
       <div className="flex items-center justify-between">
-        <div>
+        <label htmlFor={`notify-new-${repo.id}`}>
           <p className="text-sm font-medium">Notify on new overlaps</p>
-        </div>
-        <Switch checked={notifyNew} onCheckedChange={setNotifyNew} />
+        </label>
+        <Switch id={`notify-new-${repo.id}`} checked={notifyNew} onCheckedChange={setNotifyNew} />
       </div>
 
       <div className="flex items-center justify-between">
-        <div>
+        <label htmlFor={`notify-severity-${repo.id}`}>
           <p className="text-sm font-medium">Notify on severity increase</p>
-        </div>
-        <Switch checked={notifySeverity} onCheckedChange={setNotifySeverity} />
+        </label>
+        <Switch id={`notify-severity-${repo.id}`} checked={notifySeverity} onCheckedChange={setNotifySeverity} />
       </div>
 
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">Branch pruning</p>
+          <label htmlFor={`pruning-${repo.id}`} className="text-sm font-medium">Branch pruning</label>
           <p className="text-xs text-muted-foreground">Remove inactive branches after</p>
         </div>
         <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+          id={`pruning-${repo.id}`}
+          className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           value={pruningDays}
           onChange={(e) => setPruningDays(Number(e.target.value))}
         >
@@ -208,12 +215,14 @@ function RepoSettings({
       </div>
 
       <div>
-        <p className="text-sm font-medium mb-1">Ignored file patterns</p>
+        <label htmlFor={`ignored-${repo.id}`} className="text-sm font-medium mb-1 block">Ignored file patterns</label>
         <textarea
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
+          id={`ignored-${repo.id}`}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           rows={3}
           value={ignoredPaths}
           onChange={(e) => setIgnoredPaths(e.target.value)}
+          placeholder="e.g. *.lock&#10;dist/**"
         />
       </div>
 
@@ -229,8 +238,14 @@ function RepoSettings({
           })
         }
       >
-        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Save Settings
+        {isSaving ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          'Save Settings'
+        )}
       </Button>
     </div>
   )

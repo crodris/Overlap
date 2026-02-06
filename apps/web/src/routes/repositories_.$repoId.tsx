@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { Skeleton } from '~/components/ui/skeleton'
+import { useToast } from '~/components/ui/toast'
 import { DiffViewer } from '~/components/diff-viewer'
 import { ArrowLeft, ArrowLeftRight, GitBranch, AlertTriangle, CheckCircle, Loader2, FileCode, X, Bell } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
@@ -26,6 +28,7 @@ function RepositoryDetailContent() {
   const { repoId } = Route.useParams()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { toast } = useToast()
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ['repository', repoId],
@@ -47,24 +50,64 @@ function RepositoryDetailContent() {
   const updateOverlap = useMutation({
     mutationFn: ({ overlapId, status }: { overlapId: string; status: string }) =>
       api.updateOverlap(repoId, overlapId, { status }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['overlaps', repoId] })
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
+      toast(variables.status === 'resolved' ? 'Overlap marked as resolved' : 'Overlap ignored')
+    },
+    onError: () => {
+      toast('Failed to update overlap', 'error')
     },
   })
 
   if (repoLoading) {
     return (
-      <div className="flex items-center justify-center p-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="p-4 md:p-8">
+        <Skeleton className="h-5 w-40 mb-4" />
+        <Skeleton className="h-9 w-64 mb-2" />
+        <Skeleton className="h-5 w-48 mb-8" />
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-7 w-40 mb-1" />
+              <Skeleton className="h-5 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-7 w-40 mb-1" />
+              <Skeleton className="h-5 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (!repo) {
     return (
-      <div className="p-8">
-        <p className="text-muted-foreground">Repository not found.</p>
+      <div className="p-4 md:p-8">
+        <Link to="/repositories" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Back to repositories
+        </Link>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Repository not found</h3>
+            <p className="text-muted-foreground">This repository may have been removed or you may not have access.</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -79,7 +122,7 @@ function RepositoryDetailContent() {
   const overlaps = overlapList ?? []
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
       <div className="mb-8">
         <Link to="/repositories" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
@@ -111,7 +154,7 @@ function RepositoryDetailContent() {
           <CardContent>
             {branches.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                No active branches yet.
+                No active branches yet. Branches will appear here when changes are pushed.
               </p>
             ) : (
               <div className="space-y-3">
@@ -161,9 +204,11 @@ function RepositoryDetailContent() {
           </CardHeader>
           <CardContent>
             {overlaps.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No active overlaps.
-              </p>
+              <div className="py-4 text-center">
+                <CheckCircle className="h-8 w-8 mx-auto text-overlap-success mb-2" />
+                <p className="text-sm font-medium">No active overlaps</p>
+                <p className="text-xs text-muted-foreground mt-1">All branches are conflict-free.</p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {overlaps.map((overlap) => (
@@ -259,8 +304,9 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
           <button
             type="button"
             onClick={() => setManualSwap(!manualSwap)}
-            className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted"
             title="Swap branch positions"
+            aria-label="Swap branch positions"
           >
             <ArrowLeftRight className="h-3.5 w-3.5" />
           </button>
@@ -282,6 +328,7 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
               key={file.filePath}
               type="button"
               onClick={() => setSelectedFile(selectedFile === file.filePath ? null : file.filePath)}
+              aria-expanded={selectedFile === file.filePath}
               className={`flex items-center gap-1.5 w-full text-left px-1.5 py-1 rounded text-xs transition-colors ${
                 selectedFile === file.filePath
                   ? 'bg-accent text-foreground'
@@ -309,7 +356,7 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
             </button>
           </div>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12" role="status" aria-label="Loading diff">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
@@ -317,7 +364,7 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
               {(error as Error).message || 'Failed to load diffs'}
             </div>
           ) : (
-            <div className="grid grid-cols-2 divide-x">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-x">
               <DiffPanel
                 branchName={leftBranch.name}
                 defaultBranch={defaultBranch}

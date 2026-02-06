@@ -101,5 +101,9 @@
     --color-diff-remove-foreground: oklch(78% 0.1 27);
     --color-diff-hunk: oklch(22% 0.03 255);
     --color-diff-hunk-foreground: oklch(78% 0.08 255);
+    --color-severity-low: oklch(85% 0.16 86);
+    --color-severity-medium: oklch(82% 0.16 70);
+    --color-severity-high: oklch(72% 0.2 27);
+    --color-severity-critical: oklch(65% 0.22 27);
   }
 }
