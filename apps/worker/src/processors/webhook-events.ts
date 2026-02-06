@@ -1,5 +1,5 @@
 import type { Job } from 'bullmq'
-import { db, webhookEvents, repositories, branches, githubAppInstallations } from '@overlap/db'
+import { db, webhookEvents, repositories, branches, githubAppInstallations, pullRequests, users } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import type { WebhookEventJob, PushEvent, PullRequestEvent, InstallationEvent } from '@overlap/shared'
 import { GITHUB_EVENTS, PR_ACTIONS, pushEventSchema, pullRequestEventSchema, installationEventSchema } from '@overlap/shared'
@@ -8,11 +8,12 @@ import { Queue } from 'bullmq'
 import { Redis } from 'ioredis'
 import { QUEUE_NAMES } from '@overlap/shared'
 
-// Get queue for adding jobs
+// Get queues for adding jobs
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 const connection = new Redis(redisUrl, { maxRetriesPerRequest: null })
 const branchSyncQueue = new Queue(QUEUE_NAMES.BRANCH_SYNC, { connection })
 const overlapDetectionQueue = new Queue(QUEUE_NAMES.OVERLAP_DETECTION, { connection })
+const maintenanceQueue = new Queue(QUEUE_NAMES.MAINTENANCE, { connection })
 
 export async function webhookEventsProcessor(job: Job<WebhookEventJob>) {
   const { eventType, deliveryId, payload } = job.data
@@ -86,7 +87,7 @@ async function processPushEvent(payload: Record<string, unknown>) {
   // Check if this is the default branch
   const isDefault = branchName === repo.defaultBranch
 
-  // Upsert branch
+  // Upsert branch (including lastPusherGithubId)
   const existingBranch = await db.query.branches.findFirst({
     where: and(
       eq(branches.repositoryId, repo.id),
@@ -101,6 +102,7 @@ async function processPushEvent(payload: Record<string, unknown>) {
       .update(branches)
       .set({
         sha: parsed.after,
+        lastPusherGithubId: parsed.sender.id,
         lastSeenAt: new Date(),
         updatedAt: new Date(),
       })
@@ -114,6 +116,7 @@ async function processPushEvent(payload: Record<string, unknown>) {
         name: branchName,
         sha: parsed.after,
         isDefault,
+        lastPusherGithubId: parsed.sender.id,
         lastSeenAt: new Date(),
       })
       .returning()
@@ -156,8 +159,13 @@ async function processPushEvent(payload: Record<string, unknown>) {
 async function processPullRequestEvent(payload: Record<string, unknown>) {
   const parsed = pullRequestEventSchema.parse(payload)
 
-  // Only process relevant actions
-  const relevantActions = [PR_ACTIONS.OPENED, PR_ACTIONS.SYNCHRONIZE, PR_ACTIONS.REOPENED]
+  // Handle closed/merged PRs and open/sync/reopen actions
+  const relevantActions = [
+    PR_ACTIONS.OPENED,
+    PR_ACTIONS.SYNCHRONIZE,
+    PR_ACTIONS.REOPENED,
+    PR_ACTIONS.CLOSED,
+  ]
   if (!relevantActions.includes(parsed.action as typeof PR_ACTIONS.OPENED)) {
     return
   }
@@ -185,18 +193,45 @@ async function processPullRequestEvent(payload: Record<string, unknown>) {
     return
   }
 
-  // Queue overlap detection
-  await overlapDetectionQueue.add(
-    'detect',
-    {
+  // Determine PR state
+  let prState: 'open' | 'closed' | 'merged' = parsed.pull_request.state
+  if (parsed.action === PR_ACTIONS.CLOSED && parsed.pull_request.merged) {
+    prState = 'merged'
+  }
+
+  // Upsert PR record
+  await db
+    .insert(pullRequests)
+    .values({
       repositoryId: repo.id,
       branchId: branch.id,
-      triggeredBy: 'push',
-    },
-    {
-      jobId: `${repo.id}:${branch.id}:pr:${parsed.number}`,
-    }
-  )
+      githubPrNumber: parsed.pull_request.number,
+      title: parsed.pull_request.title,
+      state: prState,
+    })
+    .onConflictDoUpdate({
+      target: [pullRequests.repositoryId, pullRequests.githubPrNumber],
+      set: {
+        title: parsed.pull_request.title,
+        state: prState,
+        updatedAt: new Date(),
+      },
+    })
+
+  // Only queue overlap detection for open/reopened/synchronize (not closed)
+  if (parsed.action !== PR_ACTIONS.CLOSED) {
+    await overlapDetectionQueue.add(
+      'detect',
+      {
+        repositoryId: repo.id,
+        branchId: branch.id,
+        triggeredBy: 'push',
+      },
+      {
+        jobId: `${repo.id}:${branch.id}:pr:${parsed.number}`,
+      }
+    )
+  }
 }
 
 async function processInstallationEvent(payload: Record<string, unknown>) {
@@ -207,7 +242,6 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
     const accountType = parsed.installation.account.type
 
     let organizationId: string | null = null
-    let userId: string | null = null
 
     if (accountType === 'Organization') {
       // Upsert organization
@@ -230,6 +264,15 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
       organizationId = org.id
     }
 
+    // Link installation to user via sender.id (the person who installed)
+    let userId: string | null = null
+    const user = await db.query.users.findFirst({
+      where: eq(users.githubId, parsed.sender.id),
+    })
+    if (user) {
+      userId = user.id
+    }
+
     // Create installation record
     await db
       .insert(githubAppInstallations)
@@ -243,11 +286,54 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
         target: githubAppInstallations.installationId,
         set: {
           status: 'active',
+          userId: userId ?? undefined,
           updatedAt: new Date(),
         },
       })
 
-    console.log(`Installation created: ${parsed.installation.id}`)
+    console.log(`Installation created: ${parsed.installation.id} (userId: ${userId})`)
+
+    // Sync initial repositories
+    if (parsed.repositories && parsed.repositories.length > 0) {
+      const installation = await db.query.githubAppInstallations.findFirst({
+        where: eq(githubAppInstallations.installationId, parsed.installation.id),
+      })
+
+      if (installation) {
+        for (const repo of parsed.repositories) {
+          const [inserted] = await db
+            .insert(repositories)
+            .values({
+              githubId: repo.id,
+              installationId: installation.id,
+              name: repo.name,
+              fullName: repo.full_name,
+              isPrivate: repo.private,
+              isActive: true,
+            })
+            .onConflictDoUpdate({
+              target: repositories.githubId,
+              set: {
+                isActive: true,
+                updatedAt: new Date(),
+              },
+            })
+            .returning()
+
+          // Queue sync for each repo
+          await maintenanceQueue.add(
+            'sync_repository',
+            {
+              type: 'sync_repository' as const,
+              repositoryId: inserted.id,
+            },
+            {
+              jobId: `sync_repository:${inserted.id}`,
+            }
+          )
+        }
+      }
+    }
   } else if (parsed.action === 'deleted') {
     // Mark installation as deleted (cascade will handle repos)
     await db
@@ -282,7 +368,7 @@ async function processInstallationRepositoriesEvent(payload: Record<string, unkn
     }>
 
     for (const repo of repos) {
-      await db
+      const [inserted] = await db
         .insert(repositories)
         .values({
           githubId: repo.id,
@@ -299,6 +385,19 @@ async function processInstallationRepositoriesEvent(payload: Record<string, unkn
             updatedAt: new Date(),
           },
         })
+        .returning()
+
+      // Queue sync for new repo
+      await maintenanceQueue.add(
+        'sync_repository',
+        {
+          type: 'sync_repository' as const,
+          repositoryId: inserted.id,
+        },
+        {
+          jobId: `sync_repository:${inserted.id}`,
+        }
+      )
     }
   } else if (action === 'removed') {
     const repos = payload.repositories_removed as Array<{ id: number }>

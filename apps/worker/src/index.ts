@@ -6,6 +6,7 @@ import { branchSyncProcessor } from './processors/branch-sync.js'
 import { overlapDetectionProcessor } from './processors/overlap-detection.js'
 import { githubFeedbackProcessor } from './processors/github-feedback.js'
 import { maintenanceProcessor } from './processors/maintenance.js'
+import { pushNotificationProcessor } from './processors/push-notification.js'
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 
@@ -60,6 +61,15 @@ workers.push(
     connection,
     concurrency: 1,
     limiter: RATE_LIMITS[QUEUE_NAMES.MAINTENANCE],
+  })
+)
+
+// Push Notification Worker
+workers.push(
+  new Worker(QUEUE_NAMES.PUSH_NOTIFICATION, pushNotificationProcessor, {
+    connection,
+    concurrency: 5,
+    limiter: RATE_LIMITS[QUEUE_NAMES.PUSH_NOTIFICATION],
   })
 )
 

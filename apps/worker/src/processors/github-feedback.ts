@@ -2,7 +2,7 @@ import type { Job } from 'bullmq'
 import { db, overlaps, overlapFiles, branches, pullRequests, prAlerts, repositories, githubAppInstallations } from '@overlap/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import type { GitHubFeedbackJob } from '@overlap/shared'
-import { getGitHubClient, formatOverlapComment, formatCheckRunSummary } from '@overlap/github'
+import { getGitHubClient, formatCheckRunSummary } from '@overlap/github'
 
 export async function githubFeedbackProcessor(job: Job<GitHubFeedbackJob>) {
   const { repositoryId, pullRequestId, overlapId, alertType } = job.data
@@ -60,7 +60,7 @@ export async function githubFeedbackProcessor(job: Job<GitHubFeedbackJob>) {
 
   if (branchOverlaps.length === 0) {
     console.log('No active overlaps for this branch')
-    return { commented: false, checkRun: false }
+    return { checkRun: false }
   }
 
   // Check for existing alert (deduplication)
@@ -75,7 +75,6 @@ export async function githubFeedbackProcessor(job: Job<GitHubFeedbackJob>) {
   const [owner, repoName] = pr.repository.fullName.split('/')
   const installationId = pr.repository.installation.installationId
 
-  let commentId: number | null = existingAlert?.commentId ?? null
   let checkRunId: number | null = existingAlert?.checkRunId ?? null
 
   // Format overlap data for display
@@ -91,69 +90,39 @@ export async function githubFeedbackProcessor(job: Job<GitHubFeedbackJob>) {
     }
   })
 
-  // Create or update PR comment
-  if (alertType === 'comment' || alertType === 'both') {
-    const commentBody = formatOverlapComment(overlapData)
+  // Create check run (no PR comments — GitHub already shows conflicts)
+  const { conclusion, title, summary } = formatCheckRunSummary(overlapData)
 
-    try {
-      commentId = await github.createOrUpdatePRComment(
-        installationId,
-        owner,
-        repoName,
-        pr.githubPrNumber,
-        commentBody,
-        existingAlert?.commentId ?? undefined
-      )
-      console.log(`Comment ${existingAlert?.commentId ? 'updated' : 'created'}: ${commentId}`)
-    } catch (error) {
-      console.error('Failed to create/update PR comment:', error)
-    }
-  }
-
-  // Create check run
-  if (alertType === 'check_run' || alertType === 'both') {
-    const { conclusion, title, summary } = formatCheckRunSummary(overlapData)
-
-    try {
-      checkRunId = await github.createCheckRun(
-        installationId,
-        owner,
-        repoName,
-        pr.branch.sha,
-        'Overlap Detection',
-        conclusion,
-        title,
-        summary
-      )
-      console.log(`Check run created: ${checkRunId}`)
-    } catch (error) {
-      console.error('Failed to create check run:', error)
-    }
+  try {
+    checkRunId = await github.createCheckRun(
+      installationId,
+      owner,
+      repoName,
+      pr.branch.sha,
+      'Overlap Detection',
+      conclusion,
+      title,
+      summary
+    )
+    console.log(`Check run created: ${checkRunId}`)
+  } catch (error) {
+    console.error('Failed to create check run:', error)
   }
 
   // Record the alert
   if (existingAlert) {
-    // Update existing alert
     await db
       .update(prAlerts)
-      .set({
-        commentId,
-        checkRunId,
-      })
+      .set({ checkRunId })
       .where(eq(prAlerts.id, existingAlert.id))
   } else {
-    // Create new alert
     await db.insert(prAlerts).values({
       pullRequestId,
       overlapId,
-      alertType,
-      commentId,
+      alertType: 'check_run',
       checkRunId,
     })
   }
 
-  return {
-    commented: commentId !== null,
-    checkRun: checkRunId !== null,
-  }
+  return { checkRun: checkRunId !== null }
 }

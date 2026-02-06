@@ -6,10 +6,11 @@ import { calculateSeverity, DEFAULT_SETTINGS, QUEUE_NAMES } from '@overlap/share
 import { Queue } from 'bullmq'
 import { Redis } from 'ioredis'
 
-// Get queue for adding feedback jobs
+// Get queues for adding feedback and notification jobs
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 const connection = new Redis(redisUrl, { maxRetriesPerRequest: null })
 const githubFeedbackQueue = new Queue(QUEUE_NAMES.GITHUB_FEEDBACK, { connection })
+const pushNotificationQueue = new Queue(QUEUE_NAMES.PUSH_NOTIFICATION, { connection })
 
 export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
   const { repositoryId, branchId, triggeredBy } = job.data
@@ -188,13 +189,27 @@ export async function overlapDetectionProcessor(job: Job<OverlapDetectionJob>) {
             repositoryId,
             pullRequestId: pr.id,
             overlapId,
-            alertType: 'both',
+            alertType: 'check_run',
           },
           {
             jobId: `${pr.id}:${overlapId}`,
           }
         )
       }
+
+      // Send push notification to the developer on the OTHER branch
+      // If A pushed and overlaps with B, notify B's developer
+      await pushNotificationQueue.add(
+        'notify',
+        {
+          repositoryId,
+          overlapId,
+          targetBranchId: detected.targetBranchId,
+        },
+        {
+          jobId: `push:${overlapId}:${detected.targetBranchId}`,
+        }
+      )
     }
   }
 

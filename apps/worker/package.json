@@ -11,16 +11,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@overlap/db": "workspace:*",
+    "@overlap/github": "workspace:*",
+    "@overlap/shared": "workspace:*",
     "bullmq": "^5.25.0",
     "drizzle-orm": "^0.38.0",
     "ioredis": "^5.4.0",
     "minimatch": "^10.0.0",
-    "@overlap/db": "workspace:*",
-    "@overlap/shared": "workspace:*",
-    "@overlap/github": "workspace:*"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/web-push": "^3.6.4",
     "tsup": "^8.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
