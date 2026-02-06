@@ -113,6 +113,16 @@ export interface CommitFile {
   previousFilename?: string
 }
 
+export interface FileDiff {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  changes: number
+  patch: string | null
+  previousFilename?: string
+}
+
 export interface BranchInfo {
   name: string
   sha: string
@@ -212,6 +222,38 @@ export class GitHubClient {
       return (data.files || []).map((file) => ({
         filename: file.filename,
         status: file.status as CommitFile['status'],
+        previousFilename: file.previous_filename,
+      }))
+    })
+  }
+
+  /**
+   * Get all file diffs between two refs (returns patches for every changed file)
+   */
+  async getCompareDiffs(
+    installationId: number,
+    owner: string,
+    repo: string,
+    base: string,
+    head: string
+  ): Promise<FileDiff[]> {
+    const octokit = await this.getInstallationClient(installationId)
+
+    return withRetry(async () => {
+      const { data } = await octokit.repos.compareCommits({
+        owner,
+        repo,
+        base,
+        head,
+      })
+
+      return (data.files || []).map((file) => ({
+        filename: file.filename,
+        status: file.status ?? 'modified',
+        additions: file.additions,
+        deletions: file.deletions,
+        changes: file.changes,
+        patch: file.patch ?? null,
         previousFilename: file.previous_filename,
       }))
     })

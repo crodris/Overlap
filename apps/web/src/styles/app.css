@@ -36,6 +36,14 @@
   --color-overlap-danger: oklch(57.7% 0.245 27.325);
   --color-overlap-success: oklch(76.5% 0.177 163.223);
 
+  /* Diff colors */
+  --color-diff-add: oklch(95% 0.052 163);
+  --color-diff-add-foreground: oklch(35% 0.12 163);
+  --color-diff-remove: oklch(95% 0.042 27);
+  --color-diff-remove-foreground: oklch(45% 0.18 27);
+  --color-diff-hunk: oklch(95% 0.035 255);
+  --color-diff-hunk-foreground: oklch(45% 0.12 255);
+
   /* Severity colors */
   --color-severity-low: oklch(79.5% 0.184 86.047);
   --color-severity-medium: oklch(76.9% 0.188 70.08);
@@ -87,5 +95,11 @@
     --color-chart-3: oklch(55% 0.07 227.392);
     --color-chart-4: oklch(82.8% 0.189 84.429);
     --color-chart-5: oklch(76.9% 0.188 70.08);
+    --color-diff-add: oklch(22% 0.04 163);
+    --color-diff-add-foreground: oklch(78% 0.1 163);
+    --color-diff-remove: oklch(22% 0.04 27);
+    --color-diff-remove-foreground: oklch(78% 0.1 27);
+    --color-diff-hunk: oklch(22% 0.03 255);
+    --color-diff-hunk-foreground: oklch(78% 0.08 255);
   }
 }

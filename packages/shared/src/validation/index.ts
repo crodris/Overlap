@@ -47,6 +47,15 @@ export const branchQuerySchema = z
   .merge(paginationSchema)
 
 // ============================================================================
+// Diff Schemas
+// ============================================================================
+
+export const diffQuerySchema = z.object({
+  base: z.string().min(1),
+  head: z.string().min(1),
+})
+
+// ============================================================================
 // Overlap Schemas
 // ============================================================================
 
@@ -163,6 +172,7 @@ export const installationEventSchema = z.object({
 export type PaginationInput = z.infer<typeof paginationSchema>
 export type GitHubOAuthCallback = z.infer<typeof githubOAuthCallbackSchema>
 export type RepositorySettingsUpdate = z.infer<typeof repositorySettingsUpdateSchema>
+export type DiffQuery = z.infer<typeof diffQuerySchema>
 export type BranchQuery = z.infer<typeof branchQuerySchema>
 export type OverlapQuery = z.infer<typeof overlapQuerySchema>
 export type OverlapUpdate = z.infer<typeof overlapUpdateSchema>

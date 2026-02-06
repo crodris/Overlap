@@ -4,6 +4,7 @@ export {
   RateLimitError,
   type GitHubConfig,
   type CommitFile,
+  type FileDiff,
   type BranchInfo,
   type PullRequestInfo,
 } from './client.js'

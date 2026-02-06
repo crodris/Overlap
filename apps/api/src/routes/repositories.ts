@@ -7,7 +7,9 @@ import {
   branchQuerySchema,
   overlapQuerySchema,
   overlapUpdateSchema,
+  diffQuerySchema,
 } from '@overlap/shared'
+import { getGitHubClient } from '@overlap/github'
 import { requireAuth } from '../plugins/auth.js'
 
 export async function repositoriesRoute(fastify: FastifyInstance) {
@@ -209,6 +211,48 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
       })
 
       return overlapList
+    }
+  )
+
+  // Get all file diffs between two branches
+  fastify.get<{ Params: { id: string }; Querystring: unknown }>(
+    '/:id/diffs',
+    async (request, reply) => {
+      const { id } = repositoryIdParamSchema.parse(request.params)
+      const { base, head } = diffQuerySchema.parse(request.query)
+
+      const repo = await requireRepoAccess(request, reply, id)
+      if (!repo) return
+
+      const repoWithInstallation = await db.query.repositories.findFirst({
+        where: eq(repositories.id, id),
+        with: { installation: true },
+      })
+
+      if (!repoWithInstallation?.installation) {
+        return reply.status(500).send({ error: 'Installation not found' })
+      }
+
+      const [owner, name] = repoWithInstallation.fullName.split('/')
+      const github = getGitHubClient()
+
+      try {
+        const diffs = await github.getCompareDiffs(
+          repoWithInstallation.installation.installationId,
+          owner,
+          name,
+          base,
+          head
+        )
+
+        return { files: diffs }
+      } catch (error: unknown) {
+        const err = error as { status?: number; message?: string }
+        if (err.status === 404) {
+          return reply.status(404).send({ error: 'Branch no longer exists' })
+        }
+        throw error
+      }
     }
   )
 

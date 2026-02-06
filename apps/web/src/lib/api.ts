@@ -126,6 +126,21 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  getCompareDiffs: (repoId: string, params: { base: string; head: string }) => {
+    const qs = new URLSearchParams(params).toString()
+    return request<{
+      files: Array<{
+        filename: string
+        status: string
+        additions: number
+        deletions: number
+        changes: number
+        patch: string | null
+        previousFilename?: string
+      }>
+    }>(`/api/repositories/${repoId}/diffs?${qs}`)
+  },
+
   // Push notifications
   subscribePush: (subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
     request('/api/push/subscribe', {
