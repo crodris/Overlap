@@ -1,9 +1,12 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import { authPlugin } from './plugins/auth.js'
 import { webhooksRoute } from './routes/webhooks.js'
 import { healthRoute } from './routes/health.js'
 import { repositoriesRoute } from './routes/repositories.js'
+import { authRoute } from './routes/auth.js'
+import { pushRoute } from './routes/push.js'
 import { setupQueues } from './queues/index.js'
 import { setupScheduler } from './scheduler.js'
 
@@ -36,6 +39,9 @@ async function start() {
       timeWindow: '1 minute',
     })
 
+    // Register auth plugin (cookie parsing + session)
+    await fastify.register(authPlugin)
+
     // Setup BullMQ queues
     const queues = setupQueues()
     fastify.decorate('queues', queues)
@@ -43,7 +49,9 @@ async function start() {
     // Register routes
     await fastify.register(healthRoute, { prefix: '/health' })
     await fastify.register(webhooksRoute, { prefix: '/webhooks' })
+    await fastify.register(authRoute, { prefix: '/auth' })
     await fastify.register(repositoriesRoute, { prefix: '/api/repositories' })
+    await fastify.register(pushRoute, { prefix: '/api/push' })
 
     // Setup scheduled jobs
     await setupScheduler()

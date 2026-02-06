@@ -7,6 +7,7 @@ import type {
   OverlapDetectionJob,
   GitHubFeedbackJob,
   MaintenanceJob,
+  PushNotificationJob,
 } from '@overlap/shared'
 
 export type Queues = {
@@ -15,6 +16,7 @@ export type Queues = {
   overlapDetection: Queue<OverlapDetectionJob>
   githubFeedback: Queue<GitHubFeedbackJob>
   maintenance: Queue<MaintenanceJob>
+  pushNotification: Queue<PushNotificationJob>
 }
 
 let connection: Redis | null = null
@@ -69,6 +71,10 @@ export function setupQueues(): Queues {
       },
     }),
     maintenance: new Queue<MaintenanceJob>(QUEUE_NAMES.MAINTENANCE, {
+      connection: conn,
+      defaultJobOptions,
+    }),
+    pushNotification: new Queue<PushNotificationJob>(QUEUE_NAMES.PUSH_NOTIFICATION, {
       connection: conn,
       defaultJobOptions,
     }),
