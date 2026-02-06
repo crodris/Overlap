@@ -1,5 +1,5 @@
 import type { Job } from 'bullmq'
-import { db, webhookEvents, repositories, branches, githubAppInstallations, pullRequests, users } from '@overlap/db'
+import { db, webhookEvents, repositories, branches, githubAppInstallations, pullRequests, users, userInstallations } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import type { WebhookEventJob, PushEvent, PullRequestEvent, InstallationEvent } from '@overlap/shared'
 import { GITHUB_EVENTS, PR_ACTIONS, pushEventSchema, pullRequestEventSchema, installationEventSchema } from '@overlap/shared'
@@ -274,7 +274,7 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
     }
 
     // Create installation record
-    await db
+    const [installation] = await db
       .insert(githubAppInstallations)
       .values({
         installationId: parsed.installation.id,
@@ -286,10 +286,18 @@ async function processInstallationEvent(payload: Record<string, unknown>) {
         target: githubAppInstallations.installationId,
         set: {
           status: 'active',
-          userId: userId ?? undefined,
           updatedAt: new Date(),
         },
       })
+      .returning()
+
+    // Link user to installation (many-to-many)
+    if (userId) {
+      await db
+        .insert(userInstallations)
+        .values({ userId, installationId: installation.id })
+        .onConflictDoNothing()
+    }
 
     console.log(`Installation created: ${parsed.installation.id} (userId: ${userId})`)
 

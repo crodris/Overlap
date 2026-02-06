@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { db, repositories, branches, overlaps, repositorySettings, githubAppInstallations } from '@overlap/db'
+import { db, repositories, branches, overlaps, repositorySettings, githubAppInstallations, userInstallations } from '@overlap/db'
 import { eq, and, desc, count, sql, inArray } from 'drizzle-orm'
 import {
   repositoryIdParamSchema,
@@ -14,16 +14,15 @@ export async function repositoriesRoute(fastify: FastifyInstance) {
   // All repository routes require authentication
   fastify.addHook('preHandler', requireAuth)
 
-  // Helper to get user's installation IDs
+  // Helper to get user's installation IDs (via many-to-many join table)
   async function getUserInstallationIds(userId: string): Promise<string[]> {
-    const installations = await db.query.githubAppInstallations.findMany({
-      where: and(
-        eq(githubAppInstallations.userId, userId),
-        eq(githubAppInstallations.status, 'active')
-      ),
-      columns: { id: true },
+    const links = await db.query.userInstallations.findMany({
+      where: eq(userInstallations.userId, userId),
+      with: { installation: true },
     })
-    return installations.map((i) => i.id)
+    return links
+      .filter((l) => l.installation.status === 'active')
+      .map((l) => l.installationId)
   }
 
   // Helper to verify the authenticated user has access to a repository

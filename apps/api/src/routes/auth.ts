@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { db, users, githubAppInstallations, repositories, repositorySettings } from '@overlap/db'
+import { db, users, githubAppInstallations, userInstallations, repositories, repositorySettings } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { githubOAuthCallbackSchema } from '@overlap/shared'
 import { requireAuth } from '../plugins/auth.js'
@@ -138,14 +138,12 @@ export async function authRoute(fastify: FastifyInstance) {
       await syncUserInstallations(tokenData.access_token, user.id)
 
       // Check if user has installations
-      const installation = await db.query.githubAppInstallations.findFirst({
-        where: and(
-          eq(githubAppInstallations.userId, user.id),
-          eq(githubAppInstallations.status, 'active')
-        ),
+      const userInst = await db.query.userInstallations.findFirst({
+        where: eq(userInstallations.userId, user.id),
+        with: { installation: true },
       })
 
-      if (!installation) {
+      if (!userInst || userInst.installation.status !== 'active') {
         return reply.redirect(`${appUrl}?setup=1`)
       }
 
@@ -155,16 +153,14 @@ export async function authRoute(fastify: FastifyInstance) {
 
   // Get current user
   fastify.get('/me', { preHandler: [requireAuth] }, async (request) => {
-    const installation = await db.query.githubAppInstallations.findFirst({
-      where: and(
-        eq(githubAppInstallations.userId, request.user!.id),
-        eq(githubAppInstallations.status, 'active')
-      ),
+    const userInst = await db.query.userInstallations.findFirst({
+      where: eq(userInstallations.userId, request.user!.id),
+      with: { installation: true },
     })
 
     return {
       user: request.user,
-      hasInstallations: !!installation,
+      hasInstallations: !!userInst && userInst.installation.status === 'active',
     }
   })
 
@@ -204,12 +200,17 @@ async function syncUserInstallations(accessToken: string, userId: string) {
         .onConflictDoUpdate({
           target: githubAppInstallations.installationId,
           set: {
-            userId,
             status: 'active',
             updatedAt: new Date(),
           },
         })
         .returning()
+
+      // Link user to installation (many-to-many)
+      await db
+        .insert(userInstallations)
+        .values({ userId, installationId: installation.id })
+        .onConflictDoNothing()
 
       // Sync repos for this installation
       await syncInstallationRepos(accessToken, inst.id, installation.id)

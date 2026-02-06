@@ -65,6 +65,29 @@ export const githubAppInstallations = pgTable(
 )
 
 // ============================================================================
+// User-Installation Join Table (many-to-many)
+// ============================================================================
+
+export const userInstallations = pgTable(
+  'user_installations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    installationId: uuid('installation_id')
+      .notNull()
+      .references(() => githubAppInstallations.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('user_installations_user_installation_idx').on(table.userId, table.installationId),
+    index('user_installations_user_id_idx').on(table.userId),
+    index('user_installations_installation_id_idx').on(table.installationId),
+  ]
+)
+
+// ============================================================================
 // Repositories
 // ============================================================================
 
@@ -304,6 +327,7 @@ export const pushSubscriptions = pgTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   installations: many(githubAppInstallations),
+  userInstallations: many(userInstallations),
   pushSubscriptions: many(pushSubscriptions),
 }))
 
@@ -321,6 +345,7 @@ export const githubAppInstallationsRelations = relations(githubAppInstallations,
     references: [users.id],
   }),
   repositories: many(repositories),
+  userInstallations: many(userInstallations),
 }))
 
 export const repositoriesRelations = relations(repositories, ({ one, many }) => ({
@@ -416,6 +441,17 @@ export const webhookEventsRelations = relations(webhookEvents, ({ one }) => ({
   repository: one(repositories, {
     fields: [webhookEvents.repositoryId],
     references: [repositories.id],
+  }),
+}))
+
+export const userInstallationsRelations = relations(userInstallations, ({ one }) => ({
+  user: one(users, {
+    fields: [userInstallations.userId],
+    references: [users.id],
+  }),
+  installation: one(githubAppInstallations, {
+    fields: [userInstallations.installationId],
+    references: [githubAppInstallations.id],
   }),
 }))
 
