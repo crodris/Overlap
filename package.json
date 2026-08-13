@@ -8,6 +8,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules",
     "db:generate": "turbo db:generate --filter=@overlap/db",
     "db:migrate": "turbo db:migrate --filter=@overlap/db",
