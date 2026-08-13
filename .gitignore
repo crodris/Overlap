@@ -6,6 +6,7 @@ node_modules
 dist
 .next
 .output
+.vercel
 .turbo
 *.tsbuildinfo
 
@@ -35,3 +36,6 @@ coverage
 # Database
 drizzle/*.sql
 prod_dump.sql
+
+# Internal ship-run review transcripts
+.ship-fix-report.md

@@ -1,7 +1,6 @@
 export {
   GitHubClient,
   getGitHubClient,
-  RateLimitError,
   type GitHubConfig,
   type CommitFile,
   type FileDiff,

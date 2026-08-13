@@ -14,6 +14,23 @@ import { Route as RepositoriesRouteImport } from './routes/repositories'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories_.$repoId'
+import { Route as ApiRepositoriesRouteImport } from './routes/api/repositories'
+import { Route as ApiPushRouteImport } from './routes/api/push'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiWebhooksGithubRouteImport } from './routes/api/webhooks/github'
+import { Route as ApiRepositoriesIdRouteImport } from './routes/api/repositories.$id'
+import { Route as ApiCronPruneBranchesRouteImport } from './routes/api/cron/prune-branches'
+import { Route as ApiCronCleanupEventsRouteImport } from './routes/api/cron/cleanup-events'
+import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
+import { Route as ApiRepositoriesIdSettingsRouteImport } from './routes/api/repositories.$id.settings'
+import { Route as ApiRepositoriesIdOverlapsRouteImport } from './routes/api/repositories.$id.overlaps'
+import { Route as ApiRepositoriesIdDiffsRouteImport } from './routes/api/repositories.$id.diffs'
+import { Route as ApiRepositoriesIdBranchesRouteImport } from './routes/api/repositories.$id.branches'
+import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
+import { Route as ApiRepositoriesIdOverlapsOverlapIdRouteImport } from './routes/api/repositories.$id.overlaps.$overlapId'
+import { Route as ApiRepositoriesIdOverlapsOverlapIdTestNotifyRouteImport } from './routes/api/repositories.$id.overlaps.$overlapId.test-notify'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -40,20 +57,144 @@ const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
   path: '/repositories/$repoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRepositoriesRoute = ApiRepositoriesRouteImport.update({
+  id: '/api/repositories',
+  path: '/api/repositories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushRoute = ApiPushRouteImport.update({
+  id: '/api/push',
+  path: '/api/push',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksGithubRoute = ApiWebhooksGithubRouteImport.update({
+  id: '/api/webhooks/github',
+  path: '/api/webhooks/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRepositoriesIdRoute = ApiRepositoriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiRepositoriesRoute,
+} as any)
+const ApiCronPruneBranchesRoute = ApiCronPruneBranchesRouteImport.update({
+  id: '/api/cron/prune-branches',
+  path: '/api/cron/prune-branches',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronCleanupEventsRoute = ApiCronCleanupEventsRouteImport.update({
+  id: '/api/cron/cleanup-events',
+  path: '/api/cron/cleanup-events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
+  id: '/api/auth/me',
+  path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
+  id: '/api/auth/github',
+  path: '/api/auth/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRepositoriesIdSettingsRoute =
+  ApiRepositoriesIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => ApiRepositoriesIdRoute,
+  } as any)
+const ApiRepositoriesIdOverlapsRoute =
+  ApiRepositoriesIdOverlapsRouteImport.update({
+    id: '/overlaps',
+    path: '/overlaps',
+    getParentRoute: () => ApiRepositoriesIdRoute,
+  } as any)
+const ApiRepositoriesIdDiffsRoute = ApiRepositoriesIdDiffsRouteImport.update({
+  id: '/diffs',
+  path: '/diffs',
+  getParentRoute: () => ApiRepositoriesIdRoute,
+} as any)
+const ApiRepositoriesIdBranchesRoute =
+  ApiRepositoriesIdBranchesRouteImport.update({
+    id: '/branches',
+    path: '/branches',
+    getParentRoute: () => ApiRepositoriesIdRoute,
+  } as any)
+const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGithubRoute,
+} as any)
+const ApiRepositoriesIdOverlapsOverlapIdRoute =
+  ApiRepositoriesIdOverlapsOverlapIdRouteImport.update({
+    id: '/$overlapId',
+    path: '/$overlapId',
+    getParentRoute: () => ApiRepositoriesIdOverlapsRoute,
+  } as any)
+const ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute =
+  ApiRepositoriesIdOverlapsOverlapIdTestNotifyRouteImport.update({
+    id: '/test-notify',
+    path: '/test-notify',
+    getParentRoute: () => ApiRepositoriesIdOverlapsOverlapIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/push': typeof ApiPushRoute
+  '/api/repositories': typeof ApiRepositoriesRouteWithChildren
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
+  '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
+  '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
+  '/api/repositories/$id/overlaps': typeof ApiRepositoriesIdOverlapsRouteWithChildren
+  '/api/repositories/$id/settings': typeof ApiRepositoriesIdSettingsRoute
+  '/api/repositories/$id/overlaps/$overlapId': typeof ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren
+  '/api/repositories/$id/overlaps/$overlapId/test-notify': typeof ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/push': typeof ApiPushRoute
+  '/api/repositories': typeof ApiRepositoriesRouteWithChildren
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
+  '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
+  '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
+  '/api/repositories/$id/overlaps': typeof ApiRepositoriesIdOverlapsRouteWithChildren
+  '/api/repositories/$id/settings': typeof ApiRepositoriesIdSettingsRoute
+  '/api/repositories/$id/overlaps/$overlapId': typeof ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren
+  '/api/repositories/$id/overlaps/$overlapId/test-notify': typeof ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,7 +202,24 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/repositories': typeof RepositoriesRoute
   '/settings': typeof SettingsRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/push': typeof ApiPushRoute
+  '/api/repositories': typeof ApiRepositoriesRouteWithChildren
   '/repositories_/$repoId': typeof RepositoriesRepoIdRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
+  '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
+  '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
+  '/api/repositories/$id/overlaps': typeof ApiRepositoriesIdOverlapsRouteWithChildren
+  '/api/repositories/$id/settings': typeof ApiRepositoriesIdSettingsRoute
+  '/api/repositories/$id/overlaps/$overlapId': typeof ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren
+  '/api/repositories/$id/overlaps/$overlapId/test-notify': typeof ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -70,16 +228,72 @@ export interface FileRouteTypes {
     | '/login'
     | '/repositories'
     | '/settings'
+    | '/api/health'
+    | '/api/push'
+    | '/api/repositories'
     | '/repositories/$repoId'
+    | '/api/auth/github'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
+    | '/api/repositories/$id'
+    | '/api/webhooks/github'
+    | '/api/auth/github/callback'
+    | '/api/repositories/$id/branches'
+    | '/api/repositories/$id/diffs'
+    | '/api/repositories/$id/overlaps'
+    | '/api/repositories/$id/settings'
+    | '/api/repositories/$id/overlaps/$overlapId'
+    | '/api/repositories/$id/overlaps/$overlapId/test-notify'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/repositories' | '/settings' | '/repositories/$repoId'
+  to:
+    | '/'
+    | '/login'
+    | '/repositories'
+    | '/settings'
+    | '/api/health'
+    | '/api/push'
+    | '/api/repositories'
+    | '/repositories/$repoId'
+    | '/api/auth/github'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
+    | '/api/repositories/$id'
+    | '/api/webhooks/github'
+    | '/api/auth/github/callback'
+    | '/api/repositories/$id/branches'
+    | '/api/repositories/$id/diffs'
+    | '/api/repositories/$id/overlaps'
+    | '/api/repositories/$id/settings'
+    | '/api/repositories/$id/overlaps/$overlapId'
+    | '/api/repositories/$id/overlaps/$overlapId/test-notify'
   id:
     | '__root__'
     | '/'
     | '/login'
     | '/repositories'
     | '/settings'
+    | '/api/health'
+    | '/api/push'
+    | '/api/repositories'
     | '/repositories_/$repoId'
+    | '/api/auth/github'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
+    | '/api/repositories/$id'
+    | '/api/webhooks/github'
+    | '/api/auth/github/callback'
+    | '/api/repositories/$id/branches'
+    | '/api/repositories/$id/diffs'
+    | '/api/repositories/$id/overlaps'
+    | '/api/repositories/$id/settings'
+    | '/api/repositories/$id/overlaps/$overlapId'
+    | '/api/repositories/$id/overlaps/$overlapId/test-notify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,7 +301,16 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RepositoriesRoute: typeof RepositoriesRoute
   SettingsRoute: typeof SettingsRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ApiPushRoute: typeof ApiPushRoute
+  ApiRepositoriesRoute: typeof ApiRepositoriesRouteWithChildren
   RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
+  ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiCronCleanupEventsRoute: typeof ApiCronCleanupEventsRoute
+  ApiCronPruneBranchesRoute: typeof ApiCronPruneBranchesRoute
+  ApiWebhooksGithubRoute: typeof ApiWebhooksGithubRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -127,15 +350,214 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepositoriesRepoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/repositories': {
+      id: '/api/repositories'
+      path: '/api/repositories'
+      fullPath: '/api/repositories'
+      preLoaderRoute: typeof ApiRepositoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push': {
+      id: '/api/push'
+      path: '/api/push'
+      fullPath: '/api/push'
+      preLoaderRoute: typeof ApiPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/github': {
+      id: '/api/webhooks/github'
+      path: '/api/webhooks/github'
+      fullPath: '/api/webhooks/github'
+      preLoaderRoute: typeof ApiWebhooksGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/repositories/$id': {
+      id: '/api/repositories/$id'
+      path: '/$id'
+      fullPath: '/api/repositories/$id'
+      preLoaderRoute: typeof ApiRepositoriesIdRouteImport
+      parentRoute: typeof ApiRepositoriesRoute
+    }
+    '/api/cron/prune-branches': {
+      id: '/api/cron/prune-branches'
+      path: '/api/cron/prune-branches'
+      fullPath: '/api/cron/prune-branches'
+      preLoaderRoute: typeof ApiCronPruneBranchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/cleanup-events': {
+      id: '/api/cron/cleanup-events'
+      path: '/api/cron/cleanup-events'
+      fullPath: '/api/cron/cleanup-events'
+      preLoaderRoute: typeof ApiCronCleanupEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/me': {
+      id: '/api/auth/me'
+      path: '/api/auth/me'
+      fullPath: '/api/auth/me'
+      preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/github': {
+      id: '/api/auth/github'
+      path: '/api/auth/github'
+      fullPath: '/api/auth/github'
+      preLoaderRoute: typeof ApiAuthGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/repositories/$id/settings': {
+      id: '/api/repositories/$id/settings'
+      path: '/settings'
+      fullPath: '/api/repositories/$id/settings'
+      preLoaderRoute: typeof ApiRepositoriesIdSettingsRouteImport
+      parentRoute: typeof ApiRepositoriesIdRoute
+    }
+    '/api/repositories/$id/overlaps': {
+      id: '/api/repositories/$id/overlaps'
+      path: '/overlaps'
+      fullPath: '/api/repositories/$id/overlaps'
+      preLoaderRoute: typeof ApiRepositoriesIdOverlapsRouteImport
+      parentRoute: typeof ApiRepositoriesIdRoute
+    }
+    '/api/repositories/$id/diffs': {
+      id: '/api/repositories/$id/diffs'
+      path: '/diffs'
+      fullPath: '/api/repositories/$id/diffs'
+      preLoaderRoute: typeof ApiRepositoriesIdDiffsRouteImport
+      parentRoute: typeof ApiRepositoriesIdRoute
+    }
+    '/api/repositories/$id/branches': {
+      id: '/api/repositories/$id/branches'
+      path: '/branches'
+      fullPath: '/api/repositories/$id/branches'
+      preLoaderRoute: typeof ApiRepositoriesIdBranchesRouteImport
+      parentRoute: typeof ApiRepositoriesIdRoute
+    }
+    '/api/auth/github/callback': {
+      id: '/api/auth/github/callback'
+      path: '/callback'
+      fullPath: '/api/auth/github/callback'
+      preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
+      parentRoute: typeof ApiAuthGithubRoute
+    }
+    '/api/repositories/$id/overlaps/$overlapId': {
+      id: '/api/repositories/$id/overlaps/$overlapId'
+      path: '/$overlapId'
+      fullPath: '/api/repositories/$id/overlaps/$overlapId'
+      preLoaderRoute: typeof ApiRepositoriesIdOverlapsOverlapIdRouteImport
+      parentRoute: typeof ApiRepositoriesIdOverlapsRoute
+    }
+    '/api/repositories/$id/overlaps/$overlapId/test-notify': {
+      id: '/api/repositories/$id/overlaps/$overlapId/test-notify'
+      path: '/test-notify'
+      fullPath: '/api/repositories/$id/overlaps/$overlapId/test-notify'
+      preLoaderRoute: typeof ApiRepositoriesIdOverlapsOverlapIdTestNotifyRouteImport
+      parentRoute: typeof ApiRepositoriesIdOverlapsOverlapIdRoute
+    }
   }
 }
+
+interface ApiRepositoriesIdOverlapsOverlapIdRouteChildren {
+  ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute: typeof ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute
+}
+
+const ApiRepositoriesIdOverlapsOverlapIdRouteChildren: ApiRepositoriesIdOverlapsOverlapIdRouteChildren =
+  {
+    ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute:
+      ApiRepositoriesIdOverlapsOverlapIdTestNotifyRoute,
+  }
+
+const ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren =
+  ApiRepositoriesIdOverlapsOverlapIdRoute._addFileChildren(
+    ApiRepositoriesIdOverlapsOverlapIdRouteChildren,
+  )
+
+interface ApiRepositoriesIdOverlapsRouteChildren {
+  ApiRepositoriesIdOverlapsOverlapIdRoute: typeof ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren
+}
+
+const ApiRepositoriesIdOverlapsRouteChildren: ApiRepositoriesIdOverlapsRouteChildren =
+  {
+    ApiRepositoriesIdOverlapsOverlapIdRoute:
+      ApiRepositoriesIdOverlapsOverlapIdRouteWithChildren,
+  }
+
+const ApiRepositoriesIdOverlapsRouteWithChildren =
+  ApiRepositoriesIdOverlapsRoute._addFileChildren(
+    ApiRepositoriesIdOverlapsRouteChildren,
+  )
+
+interface ApiRepositoriesIdRouteChildren {
+  ApiRepositoriesIdBranchesRoute: typeof ApiRepositoriesIdBranchesRoute
+  ApiRepositoriesIdDiffsRoute: typeof ApiRepositoriesIdDiffsRoute
+  ApiRepositoriesIdOverlapsRoute: typeof ApiRepositoriesIdOverlapsRouteWithChildren
+  ApiRepositoriesIdSettingsRoute: typeof ApiRepositoriesIdSettingsRoute
+}
+
+const ApiRepositoriesIdRouteChildren: ApiRepositoriesIdRouteChildren = {
+  ApiRepositoriesIdBranchesRoute: ApiRepositoriesIdBranchesRoute,
+  ApiRepositoriesIdDiffsRoute: ApiRepositoriesIdDiffsRoute,
+  ApiRepositoriesIdOverlapsRoute: ApiRepositoriesIdOverlapsRouteWithChildren,
+  ApiRepositoriesIdSettingsRoute: ApiRepositoriesIdSettingsRoute,
+}
+
+const ApiRepositoriesIdRouteWithChildren =
+  ApiRepositoriesIdRoute._addFileChildren(ApiRepositoriesIdRouteChildren)
+
+interface ApiRepositoriesRouteChildren {
+  ApiRepositoriesIdRoute: typeof ApiRepositoriesIdRouteWithChildren
+}
+
+const ApiRepositoriesRouteChildren: ApiRepositoriesRouteChildren = {
+  ApiRepositoriesIdRoute: ApiRepositoriesIdRouteWithChildren,
+}
+
+const ApiRepositoriesRouteWithChildren = ApiRepositoriesRoute._addFileChildren(
+  ApiRepositoriesRouteChildren,
+)
+
+interface ApiAuthGithubRouteChildren {
+  ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
+}
+
+const ApiAuthGithubRouteChildren: ApiAuthGithubRouteChildren = {
+  ApiAuthGithubCallbackRoute: ApiAuthGithubCallbackRoute,
+}
+
+const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
+  ApiAuthGithubRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   RepositoriesRoute: RepositoriesRoute,
   SettingsRoute: SettingsRoute,
+  ApiHealthRoute: ApiHealthRoute,
+  ApiPushRoute: ApiPushRoute,
+  ApiRepositoriesRoute: ApiRepositoriesRouteWithChildren,
   RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
+  ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiCronCleanupEventsRoute: ApiCronCleanupEventsRoute,
+  ApiCronPruneBranchesRoute: ApiCronPruneBranchesRoute,
+  ApiWebhooksGithubRoute: ApiWebhooksGithubRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

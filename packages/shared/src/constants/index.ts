@@ -1,32 +1,4 @@
 // ============================================================================
-// Queue Names
-// ============================================================================
-
-export const QUEUE_NAMES = {
-  WEBHOOK_EVENTS: 'webhook-events',
-  BRANCH_SYNC: 'branch-sync',
-  OVERLAP_DETECTION: 'overlap-detection',
-  GITHUB_FEEDBACK: 'github-feedback',
-  MAINTENANCE: 'maintenance',
-  PUSH_NOTIFICATION: 'push-notification',
-} as const
-
-export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
-
-// ============================================================================
-// Rate Limits
-// ============================================================================
-
-export const RATE_LIMITS = {
-  [QUEUE_NAMES.WEBHOOK_EVENTS]: { max: 100, duration: 1000 }, // 100/sec
-  [QUEUE_NAMES.BRANCH_SYNC]: { max: 30, duration: 60000 }, // 30/min
-  [QUEUE_NAMES.OVERLAP_DETECTION]: { max: 50, duration: 1000 }, // 50/sec
-  [QUEUE_NAMES.GITHUB_FEEDBACK]: { max: 10, duration: 60000 }, // 10/min
-  [QUEUE_NAMES.MAINTENANCE]: { max: 5, duration: 60000 }, // 5/min
-  [QUEUE_NAMES.PUSH_NOTIFICATION]: { max: 20, duration: 1000 }, // 20/sec
-} as const
-
-// ============================================================================
 // Default Settings
 // ============================================================================
 
@@ -82,23 +54,6 @@ export const PR_ACTIONS = {
   SYNCHRONIZE: 'synchronize',
   REOPENED: 'reopened',
   CLOSED: 'closed',
-} as const
-
-// ============================================================================
-// API Endpoints
-// ============================================================================
-
-export const API_ROUTES = {
-  AUTH: {
-    GITHUB: '/auth/github',
-    CALLBACK: '/auth/github/callback',
-    LOGOUT: '/auth/logout',
-    ME: '/auth/me',
-  },
-  REPOSITORIES: '/repositories',
-  WEBHOOKS: {
-    GITHUB: '/webhooks/github',
-  },
 } as const
 
 // ============================================================================

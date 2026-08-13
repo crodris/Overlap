@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Skeleton } from '~/components/ui/skeleton'
-import { GitBranch, AlertTriangle, GitPullRequest, Clock, Loader2 } from 'lucide-react'
+import { GitBranch, AlertTriangle, GitPullRequest } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { NotificationPrompt } from '~/components/notification-prompt'
 import { api } from '~/lib/api'

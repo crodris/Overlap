@@ -42,9 +42,9 @@ export const api = {
         avatarUrl: string | null
       }
       hasInstallations: boolean
-    }>('/auth/me'),
+    }>('/api/auth/me'),
 
-  logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  logout: () => request<{ success: boolean }>('/api/auth/logout', { method: 'POST' }),
 
   // Repositories
   getRepositories: () =>
@@ -144,13 +144,13 @@ export const api = {
 
   // Push notifications
   subscribePush: (subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
-    request('/api/push/subscribe', {
+    request('/api/push', {
       method: 'POST',
       body: JSON.stringify(subscription),
     }),
 
   unsubscribePush: (endpoint: string) =>
-    request('/api/push/unsubscribe', {
+    request('/api/push', {
       method: 'DELETE',
       body: JSON.stringify({ endpoint }),
     }),

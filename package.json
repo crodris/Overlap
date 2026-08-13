@@ -2,12 +2,15 @@
   "name": "overlap",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Detect overlapping file changes across active Git branches in real time",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:integration": "turbo test:integration",
     "clean": "turbo clean && rm -rf node_modules",
     "db:generate": "turbo db:generate --filter=@overlap/db",
     "db:migrate": "turbo db:migrate --filter=@overlap/db",
@@ -15,11 +18,13 @@
     "db:studio": "turbo db:studio --filter=@overlap/db"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "@types/node": "^20.11.0",
     "eslint": "^9.0.0",
     "prettier": "^3.2.0",
     "turbo": "^2.3.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.67.0"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {

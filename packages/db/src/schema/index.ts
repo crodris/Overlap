@@ -288,6 +288,7 @@ export const webhookEvents = pgTable(
       onDelete: 'set null',
     }),
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    dispatchedAt: timestamp('dispatched_at', { withTimezone: true }),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     error: text('error'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

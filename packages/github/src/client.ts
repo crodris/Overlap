@@ -1,105 +1,6 @@
 import { Octokit } from '@octokit/rest'
 import { createAppAuth } from '@octokit/auth-app'
 
-// Rate limit handling
-export class RateLimitError extends Error {
-  retryAfter: number
-
-  constructor(message: string, retryAfter: number) {
-    super(message)
-    this.name = 'RateLimitError'
-    this.retryAfter = retryAfter
-  }
-}
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  baseDelay = 1000
-): Promise<T> {
-  let lastError: Error | null = null
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (error: unknown) {
-      lastError = error as Error
-
-      // Check for rate limit
-      if (isRateLimitError(error)) {
-        const retryAfter = getRateLimitRetryAfter(error)
-        if (retryAfter > 0 && retryAfter < 300) {
-          // Max wait 5 minutes
-          console.log(`Rate limited. Waiting ${retryAfter}s before retry...`)
-          await sleep(retryAfter * 1000)
-          continue
-        }
-        throw new RateLimitError('GitHub API rate limit exceeded', retryAfter)
-      }
-
-      // Check for secondary rate limit (abuse detection)
-      if (isSecondaryRateLimit(error)) {
-        const delay = baseDelay * Math.pow(2, attempt)
-        console.log(`Secondary rate limit. Waiting ${delay}ms before retry...`)
-        await sleep(delay)
-        continue
-      }
-
-      // Check for transient errors (5xx)
-      if (isTransientError(error) && attempt < maxRetries - 1) {
-        const delay = baseDelay * Math.pow(2, attempt)
-        console.log(`Transient error. Waiting ${delay}ms before retry...`)
-        await sleep(delay)
-        continue
-      }
-
-      throw error
-    }
-  }
-
-  throw lastError
-}
-
-function isRateLimitError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false
-  const err = error as { status?: number; response?: { headers?: Record<string, string> } }
-  return err.status === 403 && err.response?.headers?.['x-ratelimit-remaining'] === '0'
-}
-
-function isSecondaryRateLimit(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false
-  const err = error as { status?: number; message?: string }
-  return err.status === 403 && (err.message?.includes('secondary rate limit') ?? false)
-}
-
-function isTransientError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false
-  const err = error as { status?: number }
-  return typeof err.status === 'number' && err.status >= 500
-}
-
-function getRateLimitRetryAfter(error: unknown): number {
-  if (typeof error !== 'object' || error === null) return 60
-  const err = error as { response?: { headers?: Record<string, string> } }
-  const retryAfter = err.response?.headers?.['retry-after']
-  const resetTime = err.response?.headers?.['x-ratelimit-reset']
-
-  if (retryAfter) {
-    return parseInt(retryAfter, 10)
-  }
-
-  if (resetTime) {
-    const resetTimestamp = parseInt(resetTime, 10) * 1000
-    return Math.max(0, Math.ceil((resetTimestamp - Date.now()) / 1000))
-  }
-
-  return 60 // Default to 60 seconds
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 export interface GitHubConfig {
   appId: string
   privateKey: string
@@ -184,19 +85,17 @@ export class GitHubClient {
   ): Promise<CommitFile[]> {
     const octokit = await this.getInstallationClient(installationId)
 
-    return withRetry(async () => {
-      const { data } = await octokit.repos.getCommit({
-        owner,
-        repo,
-        ref: sha,
-      })
-
-      return (data.files || []).map((file) => ({
-        filename: file.filename,
-        status: file.status as CommitFile['status'],
-        previousFilename: file.previous_filename,
-      }))
+    const { data } = await octokit.repos.getCommit({
+      owner,
+      repo,
+      ref: sha,
     })
+
+    return (data.files || []).map((file) => ({
+      filename: file.filename,
+      status: file.status as CommitFile['status'],
+      previousFilename: file.previous_filename,
+    }))
   }
 
   /**
@@ -211,20 +110,18 @@ export class GitHubClient {
   ): Promise<CommitFile[]> {
     const octokit = await this.getInstallationClient(installationId)
 
-    return withRetry(async () => {
-      const { data } = await octokit.repos.compareCommits({
-        owner,
-        repo,
-        base,
-        head,
-      })
-
-      return (data.files || []).map((file) => ({
-        filename: file.filename,
-        status: file.status as CommitFile['status'],
-        previousFilename: file.previous_filename,
-      }))
+    const { data } = await octokit.repos.compareCommits({
+      owner,
+      repo,
+      base,
+      head,
     })
+
+    return (data.files || []).map((file) => ({
+      filename: file.filename,
+      status: file.status as CommitFile['status'],
+      previousFilename: file.previous_filename,
+    }))
   }
 
   /**
@@ -239,24 +136,22 @@ export class GitHubClient {
   ): Promise<FileDiff[]> {
     const octokit = await this.getInstallationClient(installationId)
 
-    return withRetry(async () => {
-      const { data } = await octokit.repos.compareCommits({
-        owner,
-        repo,
-        base,
-        head,
-      })
-
-      return (data.files || []).map((file) => ({
-        filename: file.filename,
-        status: file.status ?? 'modified',
-        additions: file.additions,
-        deletions: file.deletions,
-        changes: file.changes,
-        patch: file.patch ?? null,
-        previousFilename: file.previous_filename,
-      }))
+    const { data } = await octokit.repos.compareCommits({
+      owner,
+      repo,
+      base,
+      head,
     })
+
+    return (data.files || []).map((file) => ({
+      filename: file.filename,
+      status: file.status ?? 'modified',
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes,
+      patch: file.patch ?? null,
+      previousFilename: file.previous_filename,
+    }))
   }
 
   /**
@@ -317,26 +212,24 @@ export class GitHubClient {
   ): Promise<number> {
     const octokit = await this.getInstallationClient(installationId)
 
-    return withRetry(async () => {
-      if (existingCommentId) {
-        await octokit.issues.updateComment({
-          owner,
-          repo,
-          comment_id: existingCommentId,
-          body,
-        })
-        return existingCommentId
-      }
-
-      const { data } = await octokit.issues.createComment({
+    if (existingCommentId) {
+      await octokit.issues.updateComment({
         owner,
         repo,
-        issue_number: prNumber,
+        comment_id: existingCommentId,
         body,
       })
+      return existingCommentId
+    }
 
-      return data.id
+    const { data } = await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body,
     })
+
+    return data.id
   }
 
   /**
@@ -354,22 +247,49 @@ export class GitHubClient {
   ): Promise<number> {
     const octokit = await this.getInstallationClient(installationId)
 
-    return withRetry(async () => {
-      const { data } = await octokit.checks.create({
-        owner,
-        repo,
-        name,
-        head_sha: headSha,
-        status: 'completed',
-        conclusion,
-        output: {
-          title,
-          summary,
-        },
-      })
-
-      return data.id
+    const { data } = await octokit.checks.create({
+      owner,
+      repo,
+      name,
+      head_sha: headSha,
+      status: 'completed',
+      conclusion,
+      output: {
+        title,
+        summary,
+      },
     })
+
+    return data.id
+  }
+
+  /**
+   * Update an existing check run
+   */
+  async updateCheckRun(
+    installationId: number,
+    owner: string,
+    repo: string,
+    checkRunId: number,
+    conclusion: 'success' | 'failure' | 'neutral',
+    title: string,
+    summary: string
+  ): Promise<number> {
+    const octokit = await this.getInstallationClient(installationId)
+
+    const { data } = await octokit.checks.update({
+      owner,
+      repo,
+      check_run_id: checkRunId,
+      status: 'completed',
+      conclusion,
+      output: {
+        title,
+        summary,
+      },
+    })
+
+    return data.id
   }
 
   /**

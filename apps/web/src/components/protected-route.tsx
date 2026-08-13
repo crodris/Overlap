@@ -35,7 +35,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       )
     }
 
-    // Already redirected once — show CTA
+    // Already redirected once - show CTA
     return (
       <div className="flex min-h-screen items-center justify-center p-8">
         <div className="text-center max-w-md space-y-4">

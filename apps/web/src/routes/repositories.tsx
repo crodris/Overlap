@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Skeleton } from '~/components/ui/skeleton'
-import { GitBranch, Lock, Globe, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
+import { GitBranch, Lock, Globe, ChevronRight, AlertTriangle } from 'lucide-react'
 import { ProtectedRoute } from '~/components/protected-route'
 import { api } from '~/lib/api'
 

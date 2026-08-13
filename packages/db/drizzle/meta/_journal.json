@@ -29,6 +29,13 @@
       "when": 1770340000000,
       "tag": "0003_user_installations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786589456876,
+      "tag": "0004_noisy_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }
