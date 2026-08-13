@@ -158,7 +158,20 @@ Two queue topics would have reproduced the same race that two BullMQ queues have
 
 BullMQ's `jobId` deduplication disappears and is replaced at the front door, using the unique constraint that already exists on `webhook_events.deliveryId`.
 
+HMAC verification is a hard precondition on everything below.
+No database write and no workflow start may occur before the signature is confirmed valid.
+
 ```ts
+const raw = await request.text()                     // raw bytes, before any JSON parse
+const sig = request.headers.get("x-hub-signature-256")
+
+const verification = verifyWebhookSignature(raw, sig, process.env.GITHUB_WEBHOOK_SECRET)
+if (!verification.valid) {
+  return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 401 })
+}
+
+const payload = JSON.parse(raw)
+
 const [row] = await db.insert(webhookEvents)
   .values({ deliveryId, eventType, payload, repositoryId })
   .onConflictDoNothing()
@@ -168,6 +181,9 @@ if (!row) return Response.json({ received: true })   // GitHub redelivery
 
 await start(processWebhook, [deliveryId])
 ```
+
+Ordering matters and is not stylistic.
+Inverting it produces a public unauthenticated endpoint that writes attacker-controlled JSON into `webhook_events` and starts a billed workflow run per request.
 
 This is stronger than the current behaviour.
 Deduplication state lives durably in Postgres rather than expiring out of Redis on a TTL.
@@ -309,14 +325,129 @@ Changes to `packages/db/src/client.ts`:
 | `APP_URL` | Repointed to the Vercel domain |
 | `VAPID_SUBJECT` | Repointed off the `.up.railway.app` default in `.env.example` |
 | `GITHUB_*` | Unchanged in value, moved to Vercel environment variables |
-| `SESSION_SECRET` | Unchanged in value, now used as the `jose` signing key |
+| `SESSION_SECRET` | Rotated to a new value at cutover, used as the `jose` signing key, see S5 |
+
+## Security
+
+A design-level threat model was run against this plan on 2026-08-12.
+
+Most findings below are not defects in the current code or the proposed code.
+They are safety properties that the Railway deployment was providing implicitly, and that this migration retires without any file changing to announce it.
+They are recorded here because a diff-based security review of the implementation cannot find them.
+
+### S1. Disable the Supabase Data API for the public schema
+
+Railway Postgres is reachable only over the Postgres wire protocol.
+A Supabase project additionally exposes PostgREST at `/rest/v1` on the public internet, authenticated by an anon key that is public by design.
+
+Restoring `prod_dump.sql` places every table in the `public` schema with no row-level security, because none was ever needed.
+The combination of default grants, an exposed Data API, and no RLS makes `users`, `repositories`, `branches`, `overlaps` and `webhook_events` readable by any holder of the anon key.
+`webhook_events` stores complete GitHub payloads, so this is the highest-value target in the database.
+
+Required, in order of preference:
+
+1. Disable the Data API for the `public` schema in Supabase project settings
+2. Or restore into a schema that is not exposed by PostgREST
+3. Or enable RLS on every table with no policies attached, so access fails closed
+
+The application connects directly over the Postgres protocol through Drizzle and never uses PostgREST, so disabling it costs nothing.
+This must be verified before `prod_dump.sql` is restored, not after.
+
+### S2. Webhook signature verification ordering
+
+See the code block in the idempotency section above.
+Verification of the raw request body precedes every database write and every workflow start.
+This is a required ordering, not a stylistic preference.
+
+### S3. Rate limiting removal changes the threat economics
+
+On Railway, flooding an endpoint consumed CPU that was already paid for.
+On Vercel every request is a billed invocation, so the same flood becomes a direct financial cost.
+
+Exposure, ranked:
+
+- `/api/webhooks/github` is public and unauthenticated, and computes an HMAC on every request before it can reject one.
+  A signature cannot be forged, but an attacker can force payment for each failed verification.
+- `/api/auth/github/callback` performs an outbound GitHub token exchange per request.
+- `/api/push/subscribe` is authenticated but places no bound on subscription rows per user.
+
+Required:
+
+- Vercel Firewall rate limit rules on `/api/webhooks/github` and `/api/auth/*`
+- A per-user cap on rows in `push_subscriptions`
+
+### S4. The JWT replaces the signature mechanism, not the session model
+
+The current session cookie carries `{ userId }` and every request re-reads the user from Postgres at `apps/api/src/plugins/auth.ts:51-54`.
+Revocation is therefore immediate.
+Deleting the user row ends the session on the next request.
+
+Moving to `jose` invites putting profile claims in the token and skipping that lookup.
+Doing so trades immediate revocation for a seven-day window in which a deleted user remains authenticated.
+
+Required:
+
+- The token carries `userId` and nothing else
+- The per-request database lookup is retained exactly as it is today
+- The verification algorithm is pinned explicitly rather than inferred from the token header
+- `exp` is set to seven days, matching the current cookie `maxAge`
+- `httpOnly: true`, `secure: true` in production, and `sameSite: "lax"` are preserved
+
+### S5. Rotate `SESSION_SECRET` at cutover
+
+Sessions are invalidated by the migration regardless.
+Issuing a new secret guarantees that every previously issued cookie fails closed, rather than relying on a format mismatch to reject it.
+
+### S6. `CRON_SECRET` requires a timing-safe comparison
+
+Vercel cron endpoints are publicly routable.
+`/api/cron/prune-branches` starts a workflow that iterates every active repository, so an externally triggerable cron endpoint amplifies both cost and database load.
+
+Compare using `crypto.timingSafeEqual` over equal-length buffers.
+A `===` comparison leaks the secret through response timing.
+
+### S7. Keep the OAuth state cookie integrity-protected
+
+The `oauth_state` cookie at `apps/api/src/routes/auth.ts:22-30` is currently signed, and the callback validates the unsigned value against the returned `state` parameter.
+The replacement must verify integrity, not merely check presence.
+A presence-only check reduces the CSRF protection to a value the attacker supplies.
+
+### S8. Do not pass webhook payloads into workflow arguments
+
+`start(processWebhook, [deliveryId])` deliberately passes only an identifier.
+Full GitHub payloads, which include repository names, commit messages and author email addresses, stay in Postgres and are never copied into workflow run storage.
+
+This is a privacy property of the design.
+Passing the payload directly would be a simplification that widens data residency without any corresponding benefit.
+
+### S9. `/health/ready` must drop its Redis check
+
+`apps/api/src/routes/health.ts:26-31` pings Redis through `fastify.queues`.
+After migration that object does not exist, the check throws, and the endpoint returns 503 permanently.
+The `redis` key is removed from the checks object.
+
+### Verified clean
+
+- **Repository authorization.**
+  Every `/:id` route calls `requireRepoAccess` before reading or writing, at `apps/api/src/routes/repositories.ts:101` and throughout.
+  No insecure direct object references were found.
+  The helper is carried across unchanged.
+
+- **CSRF exposure after the same-origin fold-in.**
+  Removing the CORS boundary retires a control that was gating cross-origin state changes.
+  An audit of the route table found every mutation is POST, PATCH or DELETE and every GET is a read.
+  With `sameSite: "lax"` preserved, cross-site requests do not carry the session cookie to those methods.
+  The residual requirement is narrow: preserve `sameSite: "lax"`, and introduce no state-changing GET routes.
 
 ## Cutover plan
 
 Railway stays running and untouched through step 6.
 Rollback at any point before step 7 is repointing a single URL.
 
-1. Create the Supabase project, restore `prod_dump.sql`, verify row counts against production
+1. Create the Supabase project.
+   Disable the Data API for the `public` schema per S1 **before** restoring any data.
+   Then restore `prod_dump.sql` and verify row counts against production.
+   Confirm from outside the network that `/rest/v1` returns no table data using the anon key.
 2. Deploy the migrated code to a Vercel preview deployment
 3. Create a second GitHub App pointed at the preview URL
 4. Install it on a throwaway repository and verify the full path: push a commit, open a pull request, confirm the check run appears and the push notification arrives
