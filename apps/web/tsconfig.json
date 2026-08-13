@@ -9,5 +9,5 @@
     },
     "plugins": [{ "name": "workflow" }]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*"]
 }

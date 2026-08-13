@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@overlap/db": "workspace:^",
@@ -41,12 +42,15 @@
     "workflow": "^4.8.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^20.11.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^5.1.0",
+    "@workflow/vitest": "4.0.18",
+    "esbuild": "^0.28.2",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^7.3.0",

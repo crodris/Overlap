@@ -49,7 +49,7 @@ importers:
         version: 5.67.2
       drizzle-orm:
         specifier: ^0.38.0
-        version: 0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
+        version: 0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
       fastify:
         specifier: ^5.0.0
         version: 5.7.4
@@ -128,7 +128,7 @@ importers:
         version: 2.1.1
       drizzle-orm:
         specifier: ^0.38.0
-        version: 0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
+        version: 0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
       jose:
         specifier: ^6.2.8
         version: 6.2.8
@@ -140,7 +140,7 @@ importers:
         version: 10.2.6
       nitro:
         specifier: 3.0.1-alpha.2
-        version: 3.0.1-alpha.2(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))(ioredis@5.9.2)(rollup@4.57.1)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))
+        version: 3.0.1-alpha.2(@electric-sql/pglite@0.2.17)(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))(ioredis@5.9.2)(rollup@4.57.1)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -157,6 +157,9 @@ importers:
         specifier: ^4.8.2
         version: 4.8.2(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.29(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@swc/cli@0.8.1(@swc/core@1.15.3)(chokidar@5.0.0))(@swc/core@1.15.3)(typescript@5.9.3)
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 0.2.17
+        version: 0.2.17
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.1.18(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))
@@ -175,6 +178,12 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.1.0
         version: 5.1.3(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))
+      '@workflow/vitest':
+        specifier: 4.0.18
+        version: 4.0.18(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.1.10(@types/node@20.19.31)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)))
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       tailwindcss:
         specifier: ^4.0.0
         version: 4.1.18
@@ -207,7 +216,7 @@ importers:
         version: 5.67.2
       drizzle-orm:
         specifier: ^0.38.0
-        version: 0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
+        version: 0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
       ioredis:
         specifier: ^5.4.0
         version: 5.9.2
@@ -241,11 +250,14 @@ importers:
         version: link:../shared
       drizzle-orm:
         specifier: ^0.38.0
-        version: 0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
+        version: 0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
       postgres:
         specifier: ^3.4.0
         version: 3.4.8
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 0.2.17
+        version: 0.2.17
       drizzle-kit:
         specifier: ^0.30.6
         version: 0.30.6
@@ -449,6 +461,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@electric-sql/pglite@0.2.17':
+    resolution: {integrity: sha512-qEpKRT2oUaWDH6tjRxLHjdzMqRUGYDnGZlKrnL4dJ77JVMcP2Hpo3NYnOSPKdZdeec57B6QPprCUFg0picx5Pw==}
 
   '@emnapi/core@1.8.1':
     resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
@@ -2771,6 +2786,15 @@ packages:
 
   '@workflow/vite@4.0.17':
     resolution: {integrity: sha512-+cBjYEmsirg+aIPY7e0tMEo44q9zwnX8DYt6vo42oplwT12CJp2OMzdfm1iEk/V0I0X2BIDWVuDcE0k7gnOrKw==}
+
+  '@workflow/vitest@4.0.18':
+    resolution: {integrity: sha512-/CMpSI7YOwVayyzLjxkDCbmFTg8gPK/+YrsXcAJiY9jBrTgLU7VR3tABBJP6Kycz0Qy867NEOmbcWHnxOa91TA==}
+    peerDependencies:
+      vite: '>=6.0.0'
+      vitest: '>=3.1.0'
+    peerDependenciesMeta:
+      vite:
+        optional: true
 
   '@workflow/web@4.1.18':
     resolution: {integrity: sha512-I8sXlh8cRanzFTtaWFF0bfRvCsKctOIdRO9QqS/uvb3/P91GYmvCuSqP/TTZdGaDaikL+IMTYRD1vCBScQRe4A==}
@@ -5939,6 +5963,8 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@electric-sql/pglite@0.2.17': {}
+
   '@emnapi/core@1.8.1':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -8049,6 +8075,22 @@ snapshots:
       - supports-color
       - ws
 
+  '@workflow/vitest@4.0.18(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.1.10(@types/node@20.19.31)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)))':
+    dependencies:
+      '@workflow/builders': 4.1.7
+      '@workflow/core': 4.8.2
+      '@workflow/rollup': 4.0.17
+      '@workflow/world': 4.3.1
+      '@workflow/world-local': 4.2.4
+      vitest: 4.1.10(@types/node@20.19.31)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0))
+    optionalDependencies:
+      vite: 7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - '@swc/helpers'
+      - supports-color
+      - ws
+
   '@workflow/web@4.1.18':
     dependencies:
       express: 5.2.1
@@ -8614,9 +8656,10 @@ snapshots:
 
   dateformat@4.6.3: {}
 
-  db0@0.3.4(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)):
+  db0@0.3.4(@electric-sql/pglite@0.2.17)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)):
     optionalDependencies:
-      drizzle-orm: 0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
+      '@electric-sql/pglite': 0.2.17
+      drizzle-orm: 0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)
 
   debug@4.4.3(supports-color@8.1.1):
     dependencies:
@@ -8694,8 +8737,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4):
+  drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4):
     optionalDependencies:
+      '@electric-sql/pglite': 0.2.17
       '@types/react': 19.2.10
       postgres: 3.4.8
       react: 19.2.4
@@ -9742,11 +9786,11 @@ snapshots:
 
   nf3@0.3.7: {}
 
-  nitro@3.0.1-alpha.2(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))(ioredis@5.9.2)(rollup@4.57.1)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)):
+  nitro@3.0.1-alpha.2(@electric-sql/pglite@0.2.17)(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))(ioredis@5.9.2)(rollup@4.57.1)(vite@7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.4(srvx@0.10.1)
-      db0: 0.3.4(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))
+      db0: 0.3.4(@electric-sql/pglite@0.2.17)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))
       h3: 2.0.1-rc.11(crossws@0.4.4(srvx@0.10.1))
       jiti: 2.6.1
       nf3: 0.3.7
@@ -9757,7 +9801,7 @@ snapshots:
       srvx: 0.10.1
       undici: 7.20.0
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.5(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)))(ioredis@5.9.2)(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.5(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(db0@0.3.4(@electric-sql/pglite@0.2.17)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)))(ioredis@5.9.2)(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       rollup: 4.57.1
       vite: 7.3.1(@types/node@20.19.31)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.21.0)
@@ -10718,11 +10762,11 @@ snapshots:
       picomatch: 4.0.5
       webpack-virtual-modules: 0.6.2
 
-  unstorage@2.0.0-alpha.5(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)))(ioredis@5.9.2)(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.5(@vercel/functions@3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49))(chokidar@5.0.0)(db0@0.3.4(@electric-sql/pglite@0.2.17)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4)))(ioredis@5.9.2)(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       '@vercel/functions': 3.9.3(@aws-sdk/credential-provider-web-identity@3.972.49)
       chokidar: 5.0.0
-      db0: 0.3.4(drizzle-orm@0.38.4(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))
+      db0: 0.3.4(@electric-sql/pglite@0.2.17)(drizzle-orm@0.38.4(@electric-sql/pglite@0.2.17)(@types/react@19.2.10)(postgres@3.4.8)(react@19.2.4))
       ioredis: 5.9.2
       ofetch: 2.0.0-alpha.3
 
