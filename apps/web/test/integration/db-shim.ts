@@ -15,10 +15,16 @@
  * in `detectOverlaps` and the relational `with:` loads - against the real
  * schema, with no query faking anywhere.
  *
- * `@electric-sql/pglite` is a devDependency of `packages/db` as well as of
- * this app. It is an optional peer of drizzle-orm, and pnpm keys a package
- * instance by its resolved peer set: without it on both sides the schema would
- * be built by one copy of drizzle-orm and queried by another.
+ * `@electric-sql/pglite` is deliberately a devDependency of the **workspace
+ * root**, not of this app. It is an optional peer of drizzle-orm, and pnpm
+ * keys a package instance by its resolved peer set - so declaring it in any
+ * individual package gives that package its own drizzle-orm variant, and the
+ * schema ends up built by one copy and queried by another. At the root,
+ * pnpm's `resolve-peers-from-workspace-root` satisfies the peer identically
+ * for every workspace project, so `apps/web`, `apps/api`, `apps/worker` and
+ * `packages/db` all share a single drizzle-orm. Do not move it into a package
+ * manifest: `pnpm typecheck` at the repo root will fail with
+ * "Types have separate declarations of a private property 'shouldInlineParams'".
  */
 
 import { readFile, readdir } from 'node:fs/promises'
