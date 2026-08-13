@@ -18,40 +18,55 @@ The migration deliberately restores no data (see the design's Database section),
 `repository_settings` is the exception: `pruningDays` and `ignoredPaths` are user-configured and reconstructible from nothing.
 If they differ from the defaults in `packages/shared/src/constants/index.ts`, write them down now and re-enter them after cutover.
 
-## Supabase
+## Database (Neon)
 
-**REQUIRED, before the app writes anything: close the Data API for the `public` schema.**
+Neon was chosen over Supabase after pricing them against this app.
+Supabase's compute credit was already fully consumed by another project, so a second project was $10/month of genuinely new spend - which would have left this migration $5/month WORSE than the idle Railway worker it set out to remove.
 
-Railway Postgres had no HTTP surface.
-Supabase serves PostgREST at `/rest/v1` on the public internet, authenticated by an anon key that is public by design, and the restored schema has no row-level security.
-`webhook_events` stores complete GitHub payloads, which makes it the highest-value target in the database.
+Neon's free tier covers this workload with room to spare:
 
-Verify from outside the network before proceeding:
+| | |
+| --- | --- |
+| Storage | 0.5 GB per project (this app's entire dataset is a few hundred KB) |
+| Compute | 100 CU-hours per project per month |
+| Scale-to-zero | after 5 minutes idle |
+
+CU-hours are compute-units multiplied by hours, not wall-clock hours.
+At the smallest compute size (0.25 CU) the allowance is roughly 400 wall-clock hours of active database per month, about 13 hours a day.
+The cron schedule alone accounts for around 12.5 hours a month: five wake-ups a day, each holding the compute up for about five minutes before it idles back down.
+
+**Watch the failure mode, because it is the opposite of Supabase's.**
+Supabase free pauses a project after 7 days of INACTIVITY, which would have been a bad fit for an app that can legitimately sit quiet for a week.
+Neon free suspends compute when the quota is EXHAUSTED, and it stays suspended until the next billing month.
+That is the better shape for this app, but it is still a hard outage, so set a billing alert rather than discovering it from a silent webhook.
+
+**Pooled and direct endpoints differ by HOSTNAME on Neon, not by port.**
+This is the detail most likely to be got wrong, because the widely-documented Supabase shape distinguishes them by port instead.
+
+- `DATABASE_URL` is the POOLED endpoint, with a `-pooler` suffix: `ep-xxx-pooler.region.aws.neon.tech`
+- `DIRECT_URL` is the DIRECT endpoint, no suffix: `ep-xxx.region.aws.neon.tech`
+
+Both are on 5432.
+Pointing both at the same endpoint appears to work and then fails later: migrations need the direct one for DDL and session state, and the app needs the pooled one.
+
+Create the schema:
 
 ```bash
-curl -s "https://<project>.supabase.co/rest/v1/users?select=*" -H "apikey: <anon-key>" | head
+DIRECT_URL=<direct-endpoint> pnpm db:migrate
 ```
 
-Row data coming back means stop and fix.
-
-Then create the schema:
-
-```bash
-DIRECT_URL=<direct-connection> pnpm db:migrate
-```
+**Note what this choice removes.**
+The original plan carried a REQUIRED first step to close Supabase's Data API, because Supabase serves PostgREST publicly with no row-level security on a freshly migrated schema, and `webhook_events` holds complete GitHub payloads.
+Neon exposes no such HTTP surface, so that entire risk is gone rather than mitigated.
+Two of the three silent-failure risks below remain.
 
 **REQUIRED: confirm the unique constraint on `webhook_events.delivery_id` actually exists afterwards.**
 The entire idempotency design rests on it.
 `onConflictDoNothing` against a missing constraint does not error, it simply never conflicts, so every GitHub redelivery would start a duplicate billed workflow run.
 The constraint is declared in `packages/db/drizzle/0000_woozy_prima.sql`, so a clean migrate creates it; verify rather than assume.
 
-**Connection strings, and this one is easy to get wrong:**
-
-- `DATABASE_URL` must be the Supavisor **transaction pooler**, port **6543**
-- `DIRECT_URL` must be the **direct connection**, port **5432**
-
-`.env.example` ships `localhost:5432` in both slots for local development.
-Copy-pasting that shape into production runs the app through a direct connection and exhausts it, or runs migrations through the pooler where they cannot work.
+`.env.example` ships `localhost:5432` in both slots for local development, where one Postgres serves both.
+Copy-pasting that shape into production leaves the app on a direct connection and migrations on a pooled one, which is the exact inversion of what each needs.
 
 ## Vercel
 
@@ -92,7 +107,7 @@ Do this against a preview deployment with a second GitHub App on a throwaway rep
 2. Push a commit. Confirm the check run appears.
 3. Open a pull request. Confirm the push notification arrives.
 4. Inspect the runs: `npx workflow inspect runs --backend vercel --project <project> --team crod`
-5. **Measure cold-start latency against GitHub's 10 second webhook timeout.** The route does a repository lookup, an insert, `start()`, and an update before responding, which is four round trips to Supabase rather than one. This is unmeasured and should not be assumed.
+5. **Measure cold-start latency against GitHub's 10 second webhook timeout.** The route does a repository lookup, an insert, `start()`, and an update before responding, which is four database round trips rather than one. On Neon this compounds with scale-to-zero: the first delivery after an idle period pays the compute wake-up before any of those four run. Measure a genuinely cold delivery, not a warm one.
 
 Then flip production, sign in, reinstall the App on the real repository, and confirm the pipeline reconstructs the same branches and overlaps Railway is still serving.
 That comparison is the acceptance test for the whole migration.

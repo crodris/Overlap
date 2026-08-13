@@ -1,7 +1,24 @@
 # Vercel Migration Design
 
 Date: 2026-08-12
-Status: Approved, pending implementation plan
+Status: Implemented. Superseded in one respect, see the amendment below.
+
+## Amendment, 2026-08-13: the database provider is Neon, not Supabase
+
+This document was written against Supabase and implemented that way in every respect that touches code, which is to say hardly any: `packages/db` takes a pooled Postgres connection string and nothing in the branch is provider-specific.
+
+The provider changed at cutover time for a cost reason the design did not anticipate.
+Supabase's monthly compute credit was already fully consumed by another project in the same account, so adding this one was $10/month of genuinely new spend.
+Since the entire motivation for this migration was removing a $5/month always-on Railway worker, that would have left the project $5/month worse off than doing nothing.
+Neon's free tier absorbs this workload with room to spare.
+
+Two consequences for the sections below:
+
+- **S1 no longer applies and is retained only as a record.** It required closing Supabase's public Data API, which does not exist on Neon. That risk is eliminated rather than mitigated.
+- **The pooled and direct connection strings differ by hostname, not port.** Neon's pooled endpoint carries a `-pooler` suffix; both use 5432. Wherever this document says port 6543, read "the `-pooler` hostname" instead.
+
+`docs/superpowers/specs/2026-08-12-vercel-cutover-runbook.md` is the operational document and is correct as written.
+Everything else here stands.
 
 ## Summary
 
@@ -363,8 +380,8 @@ Changes to `packages/db/src/client.ts`:
 | `REDIS_URL` | Removed |
 | `API_URL` | Removed, same-origin |
 | `VITE_API_URL` | Removed, same-origin |
-| `DATABASE_URL` | Repointed to Supabase Supavisor pooler, port 6543 |
-| `DIRECT_URL` | New, Supabase direct connection, port 5432, migrations only |
+| `DATABASE_URL` | Repointed to the Neon POOLED endpoint (`-pooler` hostname suffix) |
+| `DIRECT_URL` | New, Neon DIRECT endpoint (no `-pooler` suffix), migrations only |
 | `CRON_SECRET` | New, guards the two cron endpoints |
 | `APP_URL` | Repointed to the Vercel domain |
 | `VAPID_SUBJECT` | Repointed off the `.up.railway.app` default in `.env.example` |
@@ -380,6 +397,10 @@ They are safety properties that the Railway deployment was providing implicitly,
 They are recorded here because a diff-based security review of the implementation cannot find them.
 
 ### S1. Disable the Supabase Data API for the public schema
+
+**SUPERSEDED by the 2026-08-13 amendment at the top of this document.**
+The provider is Neon, which exposes no PostgREST surface, so there is nothing here to close.
+The section is kept in full because the reasoning applies again immediately if anyone moves this app to Supabase, and because it records why the risk was considered rather than leaving a future reader to rediscover it.
 
 Railway Postgres is reachable only over the Postgres wire protocol.
 A Supabase project additionally exposes PostgREST at `/rest/v1` on the public internet, authenticated by an anon key that is public by design.
