@@ -149,7 +149,7 @@ Step functions map one to one onto the existing processors:
 | `overlap-detection.ts` | `detectOverlaps` |
 | `github-feedback.ts` | `postCheckRun` |
 | `push-notification.ts` | `sendPush` |
-| `maintenance.ts` | `pruneStaleBranches`, `cleanupEvents`, `syncRepository` |
+| `maintenance.ts` | `getActiveRepositoryIds`, `pruneRepositoryBranches`, `cleanupOldEvents`, `syncRepository` |
 
 ### The five-second delay is deleted
 
@@ -311,7 +311,7 @@ The five Fastify route groups become TanStack Start server routes under `apps/we
 Both endpoints verify the `CRON_SECRET` header before doing anything.
 
 Each endpoint calls `start()` on a workflow rather than performing the work inline.
-`pruneStaleBranches` iterates every active repository, so its runtime scales with the number of installations and should not be bounded by a single function invocation.
+The prune workflow fans out over every active repository: `getActiveRepositoryIds` returns the id list as one step, and `pruneBranchesWorkflow` awaits one `pruneRepositoryBranches` step per id, so the work scales with the number of installations across many bounded step invocations rather than inside a single one.
 
 Vercel Pro supports minute-level cron granularity, so the existing six-hour schedule is preserved exactly.
 

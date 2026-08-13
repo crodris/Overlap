@@ -1277,6 +1277,29 @@ export async function sendPush(input: {
 
 /**
  * Reconciles the local branch list for a repository against GitHub.
+ *
+ * The writes below used to be one UPDATE-or-INSERT per remote branch,
+ * followed by a second loop issuing one UPDATE per local branch missing from
+ * the remote. On a repository with a few thousand branches that is thousands
+ * of sequential database round trips inside a single step invocation, on top
+ * of the ~30 sequential paginated GitHub API calls `getBranches` already
+ * makes at `per_page: 100` (see `packages/github/src/client.ts`). That could
+ * exceed the function's `maxDuration` (see `apps/web/vite.config.ts`), at
+ * which point the step times out, the workflow retries it, and the retry
+ * does the identical sequential work and times out again - the repository
+ * never finishes syncing.
+ *
+ * Both loops are now single set-based statements: a bulk insert with
+ * `onConflictDoUpdate` for the branches GitHub reports, and one UPDATE with
+ * `inArray` for the local branches GitHub no longer reports. `setWhere`
+ * keeps the upsert's update side a no-op when the remote SHA matches what is
+ * already stored, and `isDefault` is intentionally left out of the update
+ * `set` - both match the old loop, which only wrote on an actual SHA change
+ * and never touched `isDefault` after the initial insert.
+ *
+ * `added`/`updated` are computed from the already-fetched `localBranches` and
+ * `remoteBranches` lists rather than from what the bulk statement reports
+ * touching, so they stay exact and require no extra round trip.
  */
 export async function syncRepository(repositoryId: string): Promise<{
   added: number
@@ -1315,53 +1338,49 @@ export async function syncRepository(repositoryId: string): Promise<{
   const localBranchMap = new Map(localBranches.map((b) => [b.name, b]))
   const remoteBranchNames = new Set(remoteBranches.map((b) => b.name))
 
-  let addedCount = 0
-  let updatedCount = 0
-
-  for (const remote of remoteBranches) {
+  const addedCount = remoteBranches.filter(
+    (remote) => !localBranchMap.has(remote.name)
+  ).length
+  const updatedCount = remoteBranches.filter((remote) => {
     const local = localBranchMap.get(remote.name)
-    const isDefault = remote.name === repo.defaultBranch
+    return local !== undefined && local.sha !== remote.sha
+  }).length
 
-    if (local) {
-      // Update if SHA changed
-      if (local.sha !== remote.sha) {
-        await db
-          .update(branches)
-          .set({
-            sha: remote.sha,
-            lastSeenAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(branches.id, local.id))
-        updatedCount++
-      }
-    } else {
-      await db.insert(branches).values({
-        repositoryId,
-        name: remote.name,
-        sha: remote.sha,
-        isDefault,
-        lastSeenAt: new Date(),
+  if (remoteBranches.length > 0) {
+    await db
+      .insert(branches)
+      .values(
+        remoteBranches.map((remote) => ({
+          repositoryId,
+          name: remote.name,
+          sha: remote.sha,
+          isDefault: remote.name === repo.defaultBranch,
+          lastSeenAt: new Date(),
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [branches.repositoryId, branches.name],
+        set: {
+          sha: sql`excluded.sha`,
+          lastSeenAt: sql`excluded.last_seen_at`,
+          updatedAt: new Date(),
+        },
+        setWhere: sql`${branches.sha} <> excluded.sha`,
       })
-      addedCount++
-    }
   }
 
-  const deletedCount = localBranches.filter(
-    (b) => !remoteBranchNames.has(b.name)
-  ).length
+  const missingBranchIds = localBranches
+    .filter((local) => !remoteBranchNames.has(local.name))
+    .map((local) => local.id)
 
-  // Mark missing branches as stale (they'll be pruned later)
-  for (const local of localBranches) {
-    if (!remoteBranchNames.has(local.name)) {
-      await db
-        .update(branches)
-        .set({
-          lastSeenAt: new Date(0), // Epoch = very old
-          updatedAt: new Date(),
-        })
-        .where(eq(branches.id, local.id))
-    }
+  if (missingBranchIds.length > 0) {
+    await db
+      .update(branches)
+      .set({
+        lastSeenAt: new Date(0), // Epoch = very old
+        updatedAt: new Date(),
+      })
+      .where(inArray(branches.id, missingBranchIds))
   }
 
   await db
@@ -1370,13 +1389,13 @@ export async function syncRepository(repositoryId: string): Promise<{
     .where(eq(repositories.id, repositoryId))
 
   console.log(
-    `Synced repository: added ${addedCount}, updated ${updatedCount}, marked ${deletedCount} for deletion`
+    `Synced repository: added ${addedCount}, updated ${updatedCount}, marked ${missingBranchIds.length} for deletion`
   )
 
   return {
     added: addedCount,
     updated: updatedCount,
-    markedForDeletion: deletedCount,
+    markedForDeletion: missingBranchIds.length,
   }
 }
 

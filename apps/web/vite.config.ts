@@ -43,18 +43,31 @@ export default defineConfig({
       // confirmed by rebuilding with such a block present and finding
       // `maxDuration` absent from the built `.vc-config.json`.
       //
-      // 60s (Pro/Fluid default is 300s) is deliberately below the platform
-      // default: every request this function serves is meant to be fast -
-      // an SSR render, a handful of Drizzle queries, at most one GitHub API
-      // call (diff fetch or OAuth token exchange), or a `start()` call that
-      // hands off to a durable workflow run and returns immediately without
-      // waiting on it. 60s leaves generous headroom (~6x) over that expected
-      // path while capping the cost/blast-radius of a genuine hang - a
-      // wedged DB connection, an unbounded loop - to a fraction of the
-      // platform default instead of letting it run for 5 to 30 minutes.
+      // 120s (Pro/Fluid default is 300s) is below the platform default, but
+      // it is NOT sized against the request path alone. Vercel Workflow
+      // steps ('use step' functions in apps/web/src/workflows/steps.ts) run
+      // as invocations of this same __server function - see "A step is one
+      // function invocation" in steps.ts - so this budget bounds every step,
+      // not just an SSR render, a Drizzle query, or a `start()` call that
+      // hands off to a workflow run and returns immediately.
+      //
+      // The worst-case step is `syncRepository`: it paginates
+      // octokit.repos.listBranches at per_page: 100 (packages/github/src/
+      // client.ts), which for a repository with a few thousand branches is
+      // on the order of 30-50 sequential GitHub API pages. Its database
+      // writes were previously one UPDATE-or-INSERT per branch, which alone
+      // could exceed 60s on a large repository (see the batching in
+      // `syncRepository`); that per-branch loop is now two set-based
+      // statements, so the dominant remaining cost is the sequential GitHub
+      // pagination itself. At normal GitHub latency that comfortably fits in
+      // 60s, but 120s is used instead to leave headroom for larger
+      // repositories and slower GitHub responses without moving all the way
+      // up to the 300s platform default, which would let a genuine hang - a
+      // wedged DB connection, an unbounded loop - run five times longer than
+      // necessary.
       vercel: {
         functions: {
-          maxDuration: 60,
+          maxDuration: 120,
         },
       },
     }),
