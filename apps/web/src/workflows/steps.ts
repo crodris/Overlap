@@ -1012,6 +1012,10 @@ export async function postCheckRun(input: {
     return { checkRunId: null }
   }
 
+  // Looked up before calling GitHub so a retry of this step (after GitHub
+  // succeeded but the step failed before returning) finds the check run this
+  // attempt - or a prior attempt - already recorded, and updates it instead
+  // of creating a duplicate.
   const existingAlert = await db.query.prAlerts.findFirst({
     where: and(
       eq(prAlerts.pullRequestId, pullRequestId),
@@ -1022,8 +1026,6 @@ export async function postCheckRun(input: {
   const github = getGitHubClient()
   const [owner, repoName] = pr.repository.fullName.split('/')
   const installationId = pr.repository.installation.installationId
-
-  let checkRunId: number | null = existingAlert?.checkRunId ?? null
 
   const overlapData = branchOverlaps.map((o) => {
     const otherBranch =
@@ -1037,37 +1039,60 @@ export async function postCheckRun(input: {
     }
   })
 
-  // Create check run (no PR comments - GitHub already shows conflicts)
+  // Create or update the check run (no PR comments - GitHub already shows
+  // conflicts).
   const { conclusion, title, summary } = formatCheckRunSummary(overlapData)
 
-  try {
-    checkRunId = await github.createCheckRun(
-      installationId,
-      owner,
-      repoName,
-      pr.branch.sha,
-      'Overlap Detection',
-      conclusion,
-      title,
-      summary
-    )
-    console.log(`Check run created: ${checkRunId}`)
-  } catch (error) {
-    throw classifyGitHubError(error as never)
-  }
+  let checkRunId: number
 
-  if (existingAlert) {
-    await db
-      .update(prAlerts)
-      .set({ checkRunId })
-      .where(eq(prAlerts.id, existingAlert.id))
+  if (existingAlert?.checkRunId) {
+    checkRunId = existingAlert.checkRunId
+    try {
+      await github.updateCheckRun(
+        installationId,
+        owner,
+        repoName,
+        checkRunId,
+        conclusion,
+        title,
+        summary
+      )
+      console.log(`Check run updated: ${checkRunId}`)
+    } catch (error) {
+      throw classifyGitHubError(error as never)
+    }
   } else {
-    await db.insert(prAlerts).values({
-      pullRequestId,
-      overlapId,
-      alertType: 'check_run',
-      checkRunId,
-    })
+    try {
+      checkRunId = await github.createCheckRun(
+        installationId,
+        owner,
+        repoName,
+        pr.branch.sha,
+        'Overlap Detection',
+        conclusion,
+        title,
+        summary
+      )
+      console.log(`Check run created: ${checkRunId}`)
+    } catch (error) {
+      throw classifyGitHubError(error as never)
+    }
+
+    // Recorded immediately so a retry after this point finds the check run
+    // and updates it instead of creating a second one.
+    if (existingAlert) {
+      await db
+        .update(prAlerts)
+        .set({ checkRunId })
+        .where(eq(prAlerts.id, existingAlert.id))
+    } else {
+      await db.insert(prAlerts).values({
+        pullRequestId,
+        overlapId,
+        alertType: 'check_run',
+        checkRunId,
+      })
+    }
   }
 
   return { checkRunId }
