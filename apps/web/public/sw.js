@@ -1,4 +1,4 @@
-// Overlap Service Worker — handles push notifications
+// Overlap Service Worker - handles push notifications
 
 self.addEventListener('push', (event) => {
   if (!event.data) return
