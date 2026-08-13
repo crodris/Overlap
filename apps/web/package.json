@@ -13,6 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@overlap/db": "workspace:^",
     "@overlap/shared": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.0",
@@ -27,6 +28,7 @@
     "@tanstack/react-start": "^1.158.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "drizzle-orm": "^0.38.0",
     "jose": "^6.2.8",
     "lucide-react": "^0.470.0",
     "nitro": "3.0.1-alpha.2",
