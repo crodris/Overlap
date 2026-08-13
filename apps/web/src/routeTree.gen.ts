@@ -19,6 +19,8 @@ import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiWebhooksGithubRouteImport } from './routes/api/webhooks/github'
 import { Route as ApiRepositoriesIdRouteImport } from './routes/api/repositories.$id'
+import { Route as ApiCronPruneBranchesRouteImport } from './routes/api/cron/prune-branches'
+import { Route as ApiCronCleanupEventsRouteImport } from './routes/api/cron/cleanup-events'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
@@ -79,6 +81,16 @@ const ApiRepositoriesIdRoute = ApiRepositoriesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiRepositoriesRoute,
+} as any)
+const ApiCronPruneBranchesRoute = ApiCronPruneBranchesRouteImport.update({
+  id: '/api/cron/prune-branches',
+  path: '/api/cron/prune-branches',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronCleanupEventsRoute = ApiCronCleanupEventsRouteImport.update({
+  id: '/api/cron/cleanup-events',
+  path: '/api/cron/cleanup-events',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
   id: '/api/auth/me',
@@ -148,6 +160,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -170,6 +184,8 @@ export interface FileRoutesByTo {
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -193,6 +209,8 @@ export interface FileRoutesById {
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/cron/cleanup-events': typeof ApiCronCleanupEventsRoute
+  '/api/cron/prune-branches': typeof ApiCronPruneBranchesRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -217,6 +235,8 @@ export interface FileRouteTypes {
     | '/api/auth/github'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
     | '/api/repositories/$id'
     | '/api/webhooks/github'
     | '/api/auth/github/callback'
@@ -239,6 +259,8 @@ export interface FileRouteTypes {
     | '/api/auth/github'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
     | '/api/repositories/$id'
     | '/api/webhooks/github'
     | '/api/auth/github/callback'
@@ -261,6 +283,8 @@ export interface FileRouteTypes {
     | '/api/auth/github'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/cron/cleanup-events'
+    | '/api/cron/prune-branches'
     | '/api/repositories/$id'
     | '/api/webhooks/github'
     | '/api/auth/github/callback'
@@ -284,6 +308,8 @@ export interface RootRouteChildren {
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiCronCleanupEventsRoute: typeof ApiCronCleanupEventsRoute
+  ApiCronPruneBranchesRoute: typeof ApiCronPruneBranchesRoute
   ApiWebhooksGithubRoute: typeof ApiWebhooksGithubRoute
 }
 
@@ -358,6 +384,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/repositories/$id'
       preLoaderRoute: typeof ApiRepositoriesIdRouteImport
       parentRoute: typeof ApiRepositoriesRoute
+    }
+    '/api/cron/prune-branches': {
+      id: '/api/cron/prune-branches'
+      path: '/api/cron/prune-branches'
+      fullPath: '/api/cron/prune-branches'
+      preLoaderRoute: typeof ApiCronPruneBranchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/cleanup-events': {
+      id: '/api/cron/cleanup-events'
+      path: '/api/cron/cleanup-events'
+      fullPath: '/api/cron/cleanup-events'
+      preLoaderRoute: typeof ApiCronCleanupEventsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/me': {
       id: '/api/auth/me'
@@ -515,6 +555,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiCronCleanupEventsRoute: ApiCronCleanupEventsRoute,
+  ApiCronPruneBranchesRoute: ApiCronPruneBranchesRoute,
   ApiWebhooksGithubRoute: ApiWebhooksGithubRoute,
 }
 export const routeTree = rootRouteImport

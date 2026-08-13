@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/prune-branches", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/cleanup-events", "schedule": "0 3 * * *" }
+  ]
+}
