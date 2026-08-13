@@ -17,6 +17,7 @@ import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories_.$
 import { Route as ApiRepositoriesRouteImport } from './routes/api/repositories'
 import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiWebhooksGithubRouteImport } from './routes/api/webhooks/github'
 import { Route as ApiRepositoriesIdRouteImport } from './routes/api/repositories.$id'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -67,6 +68,11 @@ const ApiPushRoute = ApiPushRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksGithubRoute = ApiWebhooksGithubRouteImport.update({
+  id: '/api/webhooks/github',
+  path: '/api/webhooks/github',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRepositoriesIdRoute = ApiRepositoriesIdRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
   '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
   '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/repositories/$id': typeof ApiRepositoriesIdRouteWithChildren
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/repositories/$id/branches': typeof ApiRepositoriesIdBranchesRoute
   '/api/repositories/$id/diffs': typeof ApiRepositoriesIdDiffsRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/repositories/$id'
+    | '/api/webhooks/github'
     | '/api/auth/github/callback'
     | '/api/repositories/$id/branches'
     | '/api/repositories/$id/diffs'
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/repositories/$id'
+    | '/api/webhooks/github'
     | '/api/auth/github/callback'
     | '/api/repositories/$id/branches'
     | '/api/repositories/$id/diffs'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/repositories/$id'
+    | '/api/webhooks/github'
     | '/api/auth/github/callback'
     | '/api/repositories/$id/branches'
     | '/api/repositories/$id/diffs'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiWebhooksGithubRoute: typeof ApiWebhooksGithubRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -330,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/github': {
+      id: '/api/webhooks/github'
+      path: '/api/webhooks/github'
+      fullPath: '/api/webhooks/github'
+      preLoaderRoute: typeof ApiWebhooksGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/repositories/$id': {
@@ -495,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiWebhooksGithubRoute: ApiWebhooksGithubRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
