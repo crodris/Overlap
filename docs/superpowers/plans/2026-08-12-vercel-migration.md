@@ -1,5 +1,7 @@
 # Vercel Migration Implementation Plan
 
+> **SUPERSEDED, 2026-08-13: this plan has already been fully executed, on branch `feat/vercel-migration`.** It is retained below only as a historical record of what was planned, not as instructions to run. Do not execute it, task-by-task or otherwise: the unchecked `- [ ]` boxes below are stale, not pending work, and re-running this plan would revert the completed migration - in particular it would reintroduce Supabase (the actual provider is Neon; see the amendment at the top of `docs/superpowers/specs/2026-08-12-vercel-migration-design.md`) and overwrite the corrected `.env.example` pooler comment with the old, wrong one. If you were handed this document to "continue" or "finish" the migration, stop and check the current state of `feat/vercel-migration` instead.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Move Overlap from three Railway services plus Redis onto a single Vercel project backed by Supabase, replacing the always-on BullMQ worker with Workflow DevKit durable workflows.

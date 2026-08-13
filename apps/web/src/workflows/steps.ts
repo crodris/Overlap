@@ -1276,6 +1276,24 @@ export async function sendPush(input: {
 // ============================================================================
 
 /**
+ * Rows per `INSERT ... ON CONFLICT` statement in `syncRepository`'s bulk
+ * branch upsert. Well under the ~13106-row protocol ceiling documented on
+ * `syncRepository` (margin for the fact that the ceiling is derived from a
+ * fixed 5-columns-plus-`updatedAt` shape that could grow), and far above any
+ * repository this system handles in practice.
+ */
+export const BRANCH_INSERT_CHUNK_SIZE = 5000
+
+/** Splits `items` into consecutive slices of at most `size` elements each. */
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
+/**
  * Reconciles the local branch list for a repository against GitHub.
  *
  * The writes below used to be one UPDATE-or-INSERT per remote branch,
@@ -1300,6 +1318,27 @@ export async function sendPush(input: {
  * `added`/`updated` are computed from the already-fetched `localBranches` and
  * `remoteBranches` lists rather than from what the bulk statement reports
  * touching, so they stay exact and require no extra round trip.
+ *
+ * The bulk insert is chunked at `BRANCH_INSERT_CHUNK_SIZE` rows. The Postgres
+ * wire protocol encodes the Bind message's parameter count as an int16, so a
+ * single statement breaks once it needs more than 65535 bound parameters.
+ * Each row here binds 5 columns plus `updatedAt` again in the conflict
+ * `set`, i.e. `5n + 1` parameters for n rows - a hard ceiling at n = 13106
+ * (13107 rows needs 65536 parameters and fails outright). Past that point
+ * every attempt fails identically: the workflow retries, hits the same
+ * protocol error, and the repository never finishes syncing - the same
+ * failure this function's batching was written to prevent, just relocated
+ * from a load-sensitive timeout to a deterministic statement error. Chunking
+ * keeps each statement well under the ceiling; chunks are independently
+ * idempotent (same `onConflictDoUpdate` as before), so the only property
+ * lost versus one statement is cross-chunk atomicity, which the original
+ * per-branch loop never had either.
+ *
+ * The `inArray` UPDATE below is not chunked: it binds one parameter per id,
+ * so its ceiling is ~65533 ids - about five times higher than the insert's,
+ * and far beyond any repository this system handles in practice. Chunking it
+ * for symmetry would add complexity without a corresponding real ceiling to
+ * defend against.
  */
 export async function syncRepository(repositoryId: string): Promise<{
   added: number
@@ -1346,11 +1385,11 @@ export async function syncRepository(repositoryId: string): Promise<{
     return local !== undefined && local.sha !== remote.sha
   }).length
 
-  if (remoteBranches.length > 0) {
+  for (const chunk of chunkArray(remoteBranches, BRANCH_INSERT_CHUNK_SIZE)) {
     await db
       .insert(branches)
       .values(
-        remoteBranches.map((remote) => ({
+        chunk.map((remote) => ({
           repositoryId,
           name: remote.name,
           sha: remote.sha,

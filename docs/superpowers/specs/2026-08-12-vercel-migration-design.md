@@ -366,7 +366,7 @@ It is already covered by `.gitignore` and must not be committed.
 
 Changes to `packages/db/src/client.ts`:
 
-- `DATABASE_URL` points at the Supavisor transaction pooler on port 6543, not the direct connection.
+- `DATABASE_URL` points at the Supavisor transaction pooler on port 6543, not the direct connection (see the 2026-08-13 amendment at the top of this document: on Neon this is the `-pooler` hostname instead, both on port 5432).
   Serverless functions open connections per invocation and will exhaust a direct Postgres connection limit.
 - The query client is constructed with `prepare: false`.
   Transaction-mode pooling cannot support prepared statements, and `postgres-js` uses them by default.

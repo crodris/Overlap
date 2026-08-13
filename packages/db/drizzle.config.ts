@@ -5,8 +5,11 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
-    // Migrations require a direct connection (port 5432) because transaction-mode
-    // pooling (port 6543) cannot execute DDL statements and prepared statements.
+    // Migrations require a direct (unpooled) connection: they run DDL and rely
+    // on session state, which transaction pooling does not preserve. On Neon,
+    // pooled and direct differ by HOSTNAME, not by port - the pooled endpoint
+    // carries a `-pooler` suffix while the direct one does not, and both use
+    // port 5432. See packages/db/src/client.ts for the full explanation.
     url:
       process.env.DIRECT_URL ||
       process.env.DATABASE_URL ||
