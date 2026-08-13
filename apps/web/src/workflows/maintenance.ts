@@ -6,7 +6,7 @@
  * cron route and observed as a run.
  */
 
-import { cleanupOldEvents, pruneStaleBranches, syncRepository } from './steps'
+import { cleanupOldEvents, pruneStaleBranches } from './steps'
 
 /**
  * Deletes branches nobody has pushed to inside each repository's pruning
@@ -27,15 +27,4 @@ export async function cleanupEventsWorkflow(): Promise<{ cleaned: boolean }> {
   'use workflow'
 
   return await cleanupOldEvents()
-}
-
-/**
- * Reconciles one repository's branch list against GitHub.
- */
-export async function syncRepositoryWorkflow(
-  repositoryId: string
-): Promise<void> {
-  'use workflow'
-
-  await syncRepository(repositoryId)
 }

@@ -13,11 +13,11 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/
       // DEV ONLY: Test push notification for an existing overlap
       POST: async ({ request, params }) => {
         try {
-          const user = await requireUser(request)
-
           if (process.env.NODE_ENV === 'production') {
             return Response.json({ error: 'Not found' }, { status: 404 })
           }
+
+          const user = await requireUser(request)
 
           const { id } = repositoryIdParamSchema.parse(params)
           const overlapId = params.overlapId

@@ -500,7 +500,9 @@ Rollback at any point before step 7 is repointing a single URL.
 3. Deploy the migrated code to a Vercel preview deployment
 4. Create a second GitHub App pointed at the preview URL
 5. Install it on a throwaway repository and verify the full path: push a commit, open a pull request, confirm the check run appears and the push notification arrives
-6. Flip the production GitHub App webhook URL and OAuth callback URL to the Vercel domain
+6. Flip the production GitHub App webhook URL and OAuth callback URL to the Vercel domain.
+   Both the host and the path change, not only the host: the webhook URL becomes `https://<vercel-domain>/api/webhooks/github` (was `/webhooks/github` on Railway), and the OAuth callback URL becomes `https://<vercel-domain>/api/auth/github/callback` (was `/auth/github/callback` on Railway).
+   The callback path matters even if only the host is updated by habit: `apps/web/src/routes/api/auth/github.ts` sends `redirect_uri=<appUrl>/api/auth/github/callback` in the authorize request, so a GitHub App still registered with the old `/auth/github/callback` path produces a `redirect_uri` mismatch and every sign-in fails.
 7. Sign in, reinstall the App on the real repository, and confirm the pipeline reconstructs its branches and overlaps.
    Compare against what Railway is still serving.
    This comparison is the acceptance test for the whole migration.

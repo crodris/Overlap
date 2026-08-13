@@ -57,23 +57,6 @@ export const PR_ACTIONS = {
 } as const
 
 // ============================================================================
-// API Endpoints
-// ============================================================================
-
-export const API_ROUTES = {
-  AUTH: {
-    GITHUB: '/auth/github',
-    CALLBACK: '/auth/github/callback',
-    LOGOUT: '/auth/logout',
-    ME: '/auth/me',
-  },
-  REPOSITORIES: '/repositories',
-  WEBHOOKS: {
-    GITHUB: '/webhooks/github',
-  },
-} as const
-
-// ============================================================================
 // Error Codes
 // ============================================================================
 

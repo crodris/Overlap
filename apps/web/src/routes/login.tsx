@@ -30,7 +30,7 @@ function LoginPage() {
 
   const handleGitHubLogin = () => {
     setIsRedirecting(true)
-    window.location.href = '/auth/github'
+    window.location.href = '/api/auth/github'
   }
 
   return (
