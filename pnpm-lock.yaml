@@ -81,6 +81,9 @@ importers:
       '@overlap/db':
         specifier: workspace:^
         version: link:../../packages/db
+      '@overlap/github':
+        specifier: workspace:*
+        version: link:../../packages/github
       '@overlap/shared':
         specifier: workspace:*
         version: link:../../packages/shared
