@@ -6,6 +6,7 @@ const inserts = vi.fn()
 const starts = vi.fn()
 const findRepository = vi.fn()
 const findWebhookEvent = vi.fn()
+const updates = vi.fn()
 
 vi.mock('@overlap/db', () => ({
   db: {
@@ -14,6 +15,11 @@ vi.mock('@overlap/db', () => ({
       repositories: { findFirst: (...args: unknown[]) => findRepository(...args) },
       webhookEvents: { findFirst: (...args: unknown[]) => findWebhookEvent(...args) },
     },
+    update: () => ({
+      set: (values: unknown) => ({
+        where: (condition: unknown) => updates(values, condition),
+      }),
+    }),
   },
   webhookEvents: {},
   repositories: { githubId: 'githubId' },
@@ -28,6 +34,7 @@ beforeEach(() => {
   starts.mockReset()
   findRepository.mockReset()
   findWebhookEvent.mockReset()
+  updates.mockReset()
   process.env.GITHUB_WEBHOOK_SECRET = 'test-secret'
 })
 
@@ -110,80 +117,99 @@ describe('handleWebhook', () => {
     expect(inserts).toHaveBeenCalledTimes(1)
     expect(starts).toHaveBeenCalledTimes(1)
     expect(starts.mock.calls[0]?.[1]).toEqual(['abc-123'])
+    // dispatchedAt is only recorded once start() has actually returned.
+    expect(updates).toHaveBeenCalledTimes(1)
+    expect(updates.mock.calls[0]?.[0]).toMatchObject({ dispatchedAt: expect.any(Date) })
   })
 
-  it('returns 200 without starting a second workflow on redelivery of an already-PROCESSED delivery', async () => {
-    const body = JSON.stringify({ ref: 'refs/heads/main' })
-    const signature = sign(body, 'test-secret')
+  describe('redelivery of an already-stored deliveryId (onConflictDoNothing returns no row)', () => {
+    function redeliveredRequest() {
+      const body = JSON.stringify({ ref: 'refs/heads/main' })
+      const signature = sign(body, 'test-secret')
 
-    // onConflictDoNothing().returning() resolves empty: the unique constraint
-    // on deliveryId rejected the insert because this delivery was already
-    // stored. The re-read of the row shows it already finished, so this is a
-    // true no-op redelivery.
-    inserts.mockReturnValue({
-      onConflictDoNothing: () => ({
-        returning: () => Promise.resolve([]),
-      }),
-    })
-    findWebhookEvent.mockResolvedValue({
-      id: 'row-1',
-      deliveryId: 'abc-123',
-      processedAt: new Date('2026-01-01T00:00:00Z'),
-    })
+      inserts.mockReturnValue({
+        onConflictDoNothing: () => ({
+          returning: () => Promise.resolve([]),
+        }),
+      })
 
-    const req = new Request('https://example.com/api/webhooks/github', {
-      method: 'POST',
-      headers: {
-        'x-github-event': 'push',
-        'x-github-delivery': 'abc-123',
-        'x-hub-signature-256': signature,
-        'content-type': 'application/json',
-      },
-      body,
-    })
+      return new Request('https://example.com/api/webhooks/github', {
+        method: 'POST',
+        headers: {
+          'x-github-event': 'push',
+          'x-github-delivery': 'abc-123',
+          'x-hub-signature-256': signature,
+          'content-type': 'application/json',
+        },
+        body,
+      })
+    }
 
-    const res = await handleWebhook(req, { start: starts })
+    it('restarts the workflow when dispatchedAt is null (no run was ever created)', async () => {
+      findWebhookEvent.mockResolvedValue({
+        id: 'row-1',
+        deliveryId: 'abc-123',
+        dispatchedAt: null,
+        error: null,
+        processedAt: null,
+      })
 
-    expect(res.status).toBe(200)
-    expect(starts).not.toHaveBeenCalled()
-  })
+      const res = await handleWebhook(redeliveredRequest(), { start: starts })
 
-  it('starts the workflow on redelivery of an UNPROCESSED delivery (a stranded row from a prior failed start)', async () => {
-    const body = JSON.stringify({ ref: 'refs/heads/main' })
-    const signature = sign(body, 'test-secret')
-
-    // Same conflict shape as the processed case, but the stored row never
-    // finished: processedAt is still null because the earlier deps.start()
-    // call crashed or the process died before a run was created. GitHub's
-    // Redelivery is the only way an operator can retry this, so it must not
-    // be a no-op.
-    inserts.mockReturnValue({
-      onConflictDoNothing: () => ({
-        returning: () => Promise.resolve([]),
-      }),
-    })
-    findWebhookEvent.mockResolvedValue({
-      id: 'row-1',
-      deliveryId: 'abc-123',
-      processedAt: null,
+      expect(res.status).toBe(200)
+      expect(starts).toHaveBeenCalledTimes(1)
+      expect(starts.mock.calls[0]?.[1]).toEqual(['abc-123'])
+      expect(updates).toHaveBeenCalledTimes(1)
     })
 
-    const req = new Request('https://example.com/api/webhooks/github', {
-      method: 'POST',
-      headers: {
-        'x-github-event': 'push',
-        'x-github-delivery': 'abc-123',
-        'x-hub-signature-256': signature,
-        'content-type': 'application/json',
-      },
-      body,
+    it('does NOT restart when a run is in flight (dispatchedAt set, no error, not yet processed)', async () => {
+      findWebhookEvent.mockResolvedValue({
+        id: 'row-1',
+        deliveryId: 'abc-123',
+        dispatchedAt: new Date('2026-01-01T00:00:00Z'),
+        error: null,
+        processedAt: null,
+      })
+
+      const res = await handleWebhook(redeliveredRequest(), { start: starts })
+
+      expect(res.status).toBe(200)
+      expect(starts).not.toHaveBeenCalled()
+      expect(updates).not.toHaveBeenCalled()
     })
 
-    const res = await handleWebhook(req, { start: starts })
+    it('restarts the workflow when the prior run terminally failed (error set, not processed)', async () => {
+      findWebhookEvent.mockResolvedValue({
+        id: 'row-1',
+        deliveryId: 'abc-123',
+        dispatchedAt: new Date('2026-01-01T00:00:00Z'),
+        error: 'GitHub API returned 500',
+        processedAt: null,
+      })
 
-    expect(res.status).toBe(200)
-    expect(starts).toHaveBeenCalledTimes(1)
-    expect(starts.mock.calls[0]?.[1]).toEqual(['abc-123'])
+      const res = await handleWebhook(redeliveredRequest(), { start: starts })
+
+      expect(res.status).toBe(200)
+      expect(starts).toHaveBeenCalledTimes(1)
+      expect(starts.mock.calls[0]?.[1]).toEqual(['abc-123'])
+      expect(updates).toHaveBeenCalledTimes(1)
+    })
+
+    it('does NOT restart when the delivery already finished (processedAt set)', async () => {
+      findWebhookEvent.mockResolvedValue({
+        id: 'row-1',
+        deliveryId: 'abc-123',
+        dispatchedAt: new Date('2026-01-01T00:00:00Z'),
+        error: null,
+        processedAt: new Date('2026-01-01T00:05:00Z'),
+      })
+
+      const res = await handleWebhook(redeliveredRequest(), { start: starts })
+
+      expect(res.status).toBe(200)
+      expect(starts).not.toHaveBeenCalled()
+      expect(updates).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects a validly-signed delivery with no x-github-delivery header with 400', async () => {

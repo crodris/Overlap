@@ -15,15 +15,22 @@
  * on a TTL, onto the unique constraint on `webhook_events.deliveryId`, which
  * is durable in Postgres. `.onConflictDoNothing().returning()` returns no row
  * when the delivery is a GitHub redelivery of a `deliveryId` already stored.
- * That is not the same as "already handled": if the workflow start below
- * throws, or the process dies between the insert and the start, the stored
- * row's `processedAt` stays null forever and no run was ever created for it,
- * because `markEventProcessed`'s failure path only records an `error` and
- * nothing else re-drives an unprocessed row. GitHub's Redelivery button is
- * then the only recovery lever an operator has, so a redelivery of an
- * unprocessed row re-dispatches the workflow instead of being a silent
- * no-op. A redelivery of an already-processed row still short-circuits to
- * 200 without starting a second run.
+ * That is not the same as "already handled" or "safe to ignore": a stored
+ * row can be in one of four states by the time a redelivery arrives, and
+ * `dispatchedAt` (set only after `deps.start` has actually returned) is what
+ * distinguishes them:
+ *
+ *  - `dispatchedAt` null: either the process died between the insert and the
+ *    start, or `deps.start` itself threw. No run exists. Redeliver -> start.
+ *  - `dispatchedAt` set, `error` null, `processedAt` null: a run exists and
+ *    is still in flight. Redeliver -> do nothing; starting a second run here
+ *    would produce the exact duplicate-check-run / duplicate-push-
+ *    notification bug this table's unique constraint exists to prevent.
+ *  - `error` set, `processedAt` null: the run terminally failed (see
+ *    `markEventProcessed` in `apps/web/src/workflows/steps.ts`, which sets
+ *    `error` but never `processedAt` on the failure path). Redeliver ->
+ *    start again; this is the whole point of making redelivery curative.
+ *  - `processedAt` set: finished. Redeliver -> do nothing.
  *
  * The original handler also ran branch-deletion cleanup (deleting the
  * `branches` / `branch_files` rows) inline, synchronously, before enqueuing.
@@ -110,19 +117,33 @@ export async function handleWebhook(request: Request, deps: Deps): Promise<Respo
 
   if (row) {
     await deps.start(processWebhook, [deliveryId])
+    // Only recorded once deps.start has actually returned: if it throws,
+    // dispatchedAt stays null and a later redelivery will retry the
+    // dispatch instead of finding a row that looks like it already has a
+    // run and skipping it forever.
+    await db
+      .update(webhookEvents)
+      .set({ dispatchedAt: new Date() })
+      .where(eq(webhookEvents.deliveryId, deliveryId))
     return new Response(JSON.stringify({ received: true }), { status: 200 })
   }
 
   // No row means the unique constraint on deliveryId rejected the insert:
-  // this deliveryId was already stored. Check whether it was ever finished -
-  // an unprocessed row means the earlier dispatch never completed, so this
-  // redelivery is the cue to retry it rather than a no-op.
+  // this deliveryId was already stored. See the four states documented
+  // above; only the first two ever justify starting a workflow again.
   const existing = await db.query.webhookEvents.findFirst({
     where: eq(webhookEvents.deliveryId, deliveryId),
   })
 
-  if (existing && !existing.processedAt) {
+  const shouldRedispatch =
+    !!existing && (!existing.dispatchedAt || (!!existing.error && !existing.processedAt))
+
+  if (shouldRedispatch) {
     await deps.start(processWebhook, [deliveryId])
+    await db
+      .update(webhookEvents)
+      .set({ dispatchedAt: new Date() })
+      .where(eq(webhookEvents.deliveryId, deliveryId))
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200 })
