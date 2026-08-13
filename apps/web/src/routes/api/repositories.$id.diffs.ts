@@ -42,9 +42,33 @@ export const Route = createFileRoute('/api/repositories/$id/diffs')({
 
             return Response.json({ files: diffs })
           } catch (error: unknown) {
-            const err = error as { status?: number; message?: string }
+            // This route is not a workflow step, so it gets no retry and no
+            // `classifyGitHubError` (that helper returns `FatalError` /
+            // `RetryableError`, which only mean something to the workflow
+            // runtime - throwing one here would just be an unhandled
+            // rejection with extra steps). It has to translate GitHub's
+            // error shape into an HTTP response itself. Octokit's
+            // rate-limit and secondary-rate-limit responses both come back
+            // as 403 or 429; without handling them explicitly they fall
+            // through to `throw error` below and surface to the client as
+            // an unhandled 500 instead of a response it can act on.
+            const err = error as {
+              status?: number
+              message?: string
+              response?: { headers?: Record<string, string | undefined> }
+            }
             if (err.status === 404) {
               return Response.json({ error: 'Branch no longer exists' }, { status: 404 })
+            }
+            if (err.status === 403 || err.status === 429) {
+              const retryAfter = err.response?.headers?.['retry-after']
+              return Response.json(
+                { error: 'GitHub rate limit exceeded, please try again shortly' },
+                {
+                  status: 429,
+                  ...(retryAfter ? { headers: { 'Retry-After': retryAfter } } : {}),
+                }
+              )
             }
             throw error
           }

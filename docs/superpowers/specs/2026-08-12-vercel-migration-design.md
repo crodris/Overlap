@@ -473,12 +473,21 @@ Passing the payload directly would be a simplification that widens data residenc
 After migration that object does not exist, the check throws, and the endpoint returns 503 permanently.
 The `redis` key is removed from the checks object.
 
-### Verified clean
+### Verified clean, and one boundary that is not
 
-- **Repository authorization.**
-  Every `/:id` route calls `requireRepoAccess` before reading or writing, at `apps/api/src/routes/repositories.ts:101` and throughout.
-  No insecure direct object references were found.
-  The helper is carried across unchanged.
+- **Repository authorization, route layer.**
+  Every `/:id` route calls `requireUser` and then `requireRepoAccess` before reading or writing.
+  No insecure direct object references were found at the route layer: a request cannot reach one repository's data by supplying another repository's id.
+
+  This is narrower than "repository authorization" sounds, and the narrowness matters. `requireRepoAccess` (`apps/web/src/lib/repo-access.ts`) scopes access by GitHub App **installation**, not by the requesting user's actual per-repository access on GitHub.
+  `syncUserInstallations` (`apps/web/src/lib/github-oauth.ts:3-50`) links a user to an installation as soon as GitHub's `/user/installations` returns it for them, which happens once the user can reach at least one repository inside that installation.
+  `applyInstallationRepositories` and `syncInstallation` (`apps/web/src/workflows/steps.ts:450-576`, `578-`) then populate `repositories` rows for **every** repository GitHub reports for that installation, with no per-user filter.
+
+  Failure scenario: an organization installs the GitHub App across the whole org, an engineer has push access to exactly one repository in it, they sign in, and `requireRepoAccess` now passes for every repository in that installation - including `/api/repositories/$id/diffs`, which uses the installation token to fetch full patch content the requesting user was never individually granted access to on GitHub.
+
+  A second gap compounds this: `syncUserInstallations` only inserts and updates `userInstallations` rows; it never removes one. A user removed from an organization, or from just the one repository that originally qualified them for the installation, keeps access until the entire installation is uninstalled from GitHub - there is no re-sync path that revokes a single user's access.
+
+  This is pre-existing behavior, faithfully ported from `apps/api`, not something this migration introduces or worsens. It is recorded here, unfixed, because a diff-based review of the migration would see `requireRepoAccess` called correctly everywhere and conclude the tenant boundary is sound. It is not: the boundary this code actually enforces is per-installation, not per-repository-per-user. Fixing it is a separate decision - it requires either checking live GitHub permissions per request or storing per-user repository grants - and is out of scope here.
 
 - **CSRF exposure after the same-origin fold-in.**
   Removing the CORS boundary retires a control that was gating cross-origin state changes.

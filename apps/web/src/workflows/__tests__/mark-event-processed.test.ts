@@ -7,6 +7,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * branches on `error !== undefined` instead. These tests pin that: a defined
  * error, including an empty string, must always take the error path, and
  * only a genuinely omitted error takes the success path.
+ *
+ * The success path also used to leave a stale `error` from a previous failed
+ * attempt in place, since it only ever set `processedAt`. A row updated by a
+ * successful GitHub Redeliver after an earlier failure would then show both
+ * `error` and `processedAt` set, misrepresenting a cured delivery as failed
+ * in the one operator-facing table for delivery outcomes. The success path
+ * now clears `error` explicitly.
  */
 
 const { dbMock, setSpy } = vi.hoisted(() => {
@@ -40,11 +47,23 @@ describe('markEventProcessed', () => {
     vi.clearAllMocks()
   })
 
-  it('records processedAt when no error is passed', async () => {
+  it('records processedAt and clears error when no error is passed', async () => {
     const result = await markEventProcessed(DELIVERY_ID)
 
-    expect(setSpy).toHaveBeenCalledWith({ processedAt: expect.any(Date) })
+    expect(setSpy).toHaveBeenCalledWith({ processedAt: expect.any(Date), error: null })
     expect(result).toEqual({ deliveryId: DELIVERY_ID })
+  })
+
+  it('clears a previous failure on a successful GitHub redelivery', async () => {
+    // Simulates the Redeliver scenario: a delivery previously failed and
+    // recorded an error, an operator fixes the cause and redelivers, and the
+    // retry succeeds. The row must not be left claiming both outcomes.
+    await markEventProcessed(DELIVERY_ID, 'boom')
+    setSpy.mockClear()
+
+    await markEventProcessed(DELIVERY_ID)
+
+    expect(setSpy).toHaveBeenCalledWith({ processedAt: expect.any(Date), error: null })
   })
 
   it('records the error when a non-empty error message is passed', async () => {

@@ -228,6 +228,13 @@ export async function loadEvent(deliveryId: string): Promise<LoadedEvent> {
 /**
  * Records the outcome of a delivery. The processor did this in a try/catch
  * around the whole job; the workflow now decides when to call it.
+ *
+ * The success path clears `error` as well as setting `processedAt`. Without
+ * that, an operator who uses GitHub's Redeliver to retry a delivery that
+ * previously failed - after fixing whatever caused the failure - ends up
+ * with a `webhook_events` row that has both `error` and `processedAt` set,
+ * which reads as "failed" in the one table an operator has to inspect a
+ * delivery's outcome, even though the redelivery succeeded.
  */
 export async function markEventProcessed(
   deliveryId: string,
@@ -237,7 +244,11 @@ export async function markEventProcessed(
 
   await db
     .update(webhookEvents)
-    .set(error !== undefined ? { error } : { processedAt: new Date() })
+    .set(
+      error !== undefined
+        ? { error }
+        : { processedAt: new Date(), error: null }
+    )
     .where(eq(webhookEvents.deliveryId, deliveryId))
 
   return { deliveryId }
@@ -291,7 +302,7 @@ export async function upsertBranch(deliveryId: string): Promise<{
 
         // Any overlap naming this branch on either side no longer refers to
         // anything that exists on GitHub. Resolve it the same way
-        // pruneStaleBranches does for time-pruned branches, rather than
+        // pruneRepositoryBranches does for time-pruned branches, rather than
         // leaving it active and pointing at a deleted branch.
         await db
           .update(overlaps)
@@ -1370,68 +1381,93 @@ export async function syncRepository(repositoryId: string): Promise<{
 }
 
 /**
- * Deletes branches nobody has pushed to inside the repository's pruning
- * window, resolving any overlap that involved them.
+ * Returns the ids of every active repository, for `pruneBranchesWorkflow` to
+ * fan out over - one durable step per repository, the same shape
+ * `syncInstallation` already returns for `processWebhook` to loop over with
+ * `syncRepository`. See `pruneRepositoryBranches` for why the loop moved out
+ * of a single step and into the workflow.
  */
-export async function pruneStaleBranches(
-  repositoryId?: string
+export async function getActiveRepositoryIds(): Promise<{
+  repositoryIds: string[]
+}> {
+  'use step'
+
+  const repos = await db.query.repositories.findMany({
+    where: eq(repositories.isActive, true),
+    columns: { id: true },
+  })
+
+  return { repositoryIds: repos.map((repo) => repo.id) }
+}
+
+/**
+ * Deletes branches nobody has pushed to inside ONE repository's pruning
+ * window, resolving any overlap that involved them.
+ *
+ * This used to be the body of a `for` loop inside a single `pruneStaleBranches`
+ * step that walked every active repository in one function invocation. A
+ * step is one function invocation, so that loop's runtime scaled with the
+ * number of installations within one invocation's duration budget - the
+ * opposite of what a durable workflow is for. `syncRepository` already gets
+ * this right for the installation workflow: `processWebhook` loops over
+ * repository ids and awaits one `syncRepository` step per repository.
+ * `pruneBranchesWorkflow` now does the same here, awaiting this step once per
+ * id returned by `getActiveRepositoryIds`. The pruning logic itself is
+ * unchanged from the old per-repository loop body.
+ */
+export async function pruneRepositoryBranches(
+  repositoryId: string
 ): Promise<{ prunedBranches: number }> {
   'use step'
 
-  let prunedCount = 0
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, repositoryId),
+    with: { settings: true },
+  })
 
-  const repos = repositoryId
-    ? await db.query.repositories.findMany({
-        where: eq(repositories.id, repositoryId),
-        with: { settings: true },
-      })
-    : await db.query.repositories.findMany({
-        where: eq(repositories.isActive, true),
-        with: { settings: true },
-      })
-
-  for (const repo of repos) {
-    const pruningDays = repo.settings?.pruningDays ?? DEFAULT_SETTINGS.PRUNING_DAYS
-    const staleDate = new Date()
-    staleDate.setDate(staleDate.getDate() - pruningDays)
-
-    // Find stale branches (non-default, not seen recently)
-    const staleBranches = await db.query.branches.findMany({
-      where: and(
-        eq(branches.repositoryId, repo.id),
-        eq(branches.isDefault, false),
-        lt(branches.lastSeenAt, staleDate)
-      ),
-    })
-
-    if (staleBranches.length === 0) continue
-
-    const staleBranchIds = staleBranches.map((b) => b.id)
-
-    await db
-      .delete(branchFiles)
-      .where(inArray(branchFiles.branchId, staleBranchIds))
-
-    await db
-      .update(overlaps)
-      .set({
-        status: 'resolved',
-        resolvedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        sql`(${overlaps.sourceBranchId} IN (${sql.join(staleBranchIds, sql`, `)}) OR ${overlaps.targetBranchId} IN (${sql.join(staleBranchIds, sql`, `)}))`
-      )
-
-    await db.delete(branches).where(inArray(branches.id, staleBranchIds))
-
-    prunedCount += staleBranches.length
-    console.log(
-      `Pruned ${staleBranches.length} stale branches from ${repo.fullName}`
-    )
+  if (!repo) {
+    return { prunedBranches: 0 }
   }
 
-  return { prunedBranches: prunedCount }
+  const pruningDays = repo.settings?.pruningDays ?? DEFAULT_SETTINGS.PRUNING_DAYS
+  const staleDate = new Date()
+  staleDate.setDate(staleDate.getDate() - pruningDays)
+
+  // Find stale branches (non-default, not seen recently)
+  const staleBranches = await db.query.branches.findMany({
+    where: and(
+      eq(branches.repositoryId, repo.id),
+      eq(branches.isDefault, false),
+      lt(branches.lastSeenAt, staleDate)
+    ),
+  })
+
+  if (staleBranches.length === 0) return { prunedBranches: 0 }
+
+  const staleBranchIds = staleBranches.map((b) => b.id)
+
+  await db
+    .delete(branchFiles)
+    .where(inArray(branchFiles.branchId, staleBranchIds))
+
+  await db
+    .update(overlaps)
+    .set({
+      status: 'resolved',
+      resolvedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(
+      sql`(${overlaps.sourceBranchId} IN (${sql.join(staleBranchIds, sql`, `)}) OR ${overlaps.targetBranchId} IN (${sql.join(staleBranchIds, sql`, `)}))`
+    )
+
+  await db.delete(branches).where(inArray(branches.id, staleBranchIds))
+
+  console.log(
+    `Pruned ${staleBranches.length} stale branches from ${repo.fullName}`
+  )
+
+  return { prunedBranches: staleBranches.length }
 }
 
 /**
