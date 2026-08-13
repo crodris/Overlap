@@ -14,8 +14,16 @@
  * Deduplication moved off BullMQ's `jobId`, which lived in Redis and expired
  * on a TTL, onto the unique constraint on `webhook_events.deliveryId`, which
  * is durable in Postgres. `.onConflictDoNothing().returning()` returns no row
- * when the delivery is a GitHub redelivery that was already accepted, and the
- * handler returns 200 without starting a second workflow run.
+ * when the delivery is a GitHub redelivery of a `deliveryId` already stored.
+ * That is not the same as "already handled": if the workflow start below
+ * throws, or the process dies between the insert and the start, the stored
+ * row's `processedAt` stays null forever and no run was ever created for it,
+ * because `markEventProcessed`'s failure path only records an `error` and
+ * nothing else re-drives an unprocessed row. GitHub's Redelivery button is
+ * then the only recovery lever an operator has, so a redelivery of an
+ * unprocessed row re-dispatches the workflow instead of being a silent
+ * no-op. A redelivery of an already-processed row still short-circuits to
+ * 200 without starting a second run.
  *
  * The original handler also ran branch-deletion cleanup (deleting the
  * `branches` / `branch_files` rows) inline, synchronously, before enqueuing.
@@ -56,14 +64,34 @@ export async function handleWebhook(request: Request, deps: Deps): Promise<Respo
     })
   }
 
-  let payload: Record<string, unknown>
+  // A delivery with no id can never be deduplicated: every future delivery
+  // that is also missing the header would collide with this one on the
+  // empty string and be silently swallowed as a "redelivery" forever.
+  if (!deliveryId) {
+    return new Response(JSON.stringify({ error: 'Missing delivery id' }), {
+      status: 400,
+    })
+  }
+
+  let parsed: unknown
   try {
-    payload = JSON.parse(raw)
+    parsed = JSON.parse(raw)
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
       status: 400,
     })
   }
+
+  // Valid JSON can be null, a number, a string, or a boolean, none of which
+  // has a `.repository` property to read below. `typeof null === 'object'`,
+  // so it needs its own check.
+  if (typeof parsed !== 'object' || parsed === null) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+      status: 400,
+    })
+  }
+
+  const payload = parsed as Record<string, unknown>
 
   let repositoryId: string | null = null
   const repoData = payload.repository as { id?: number } | undefined
@@ -80,12 +108,22 @@ export async function handleWebhook(request: Request, deps: Deps): Promise<Respo
     .onConflictDoNothing()
     .returning()
 
-  // No row means GitHub redelivered a delivery we already accepted.
-  if (!row) {
+  if (row) {
+    await deps.start(processWebhook, [deliveryId])
     return new Response(JSON.stringify({ received: true }), { status: 200 })
   }
 
-  await deps.start(processWebhook, [deliveryId])
+  // No row means the unique constraint on deliveryId rejected the insert:
+  // this deliveryId was already stored. Check whether it was ever finished -
+  // an unprocessed row means the earlier dispatch never completed, so this
+  // redelivery is the cue to retry it rather than a no-op.
+  const existing = await db.query.webhookEvents.findFirst({
+    where: eq(webhookEvents.deliveryId, deliveryId),
+  })
+
+  if (existing && !existing.processedAt) {
+    await deps.start(processWebhook, [deliveryId])
+  }
 
   return new Response(JSON.stringify({ received: true }), { status: 200 })
 }

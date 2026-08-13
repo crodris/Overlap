@@ -31,7 +31,7 @@ import {
   users,
   webhookEvents,
 } from '@overlap/db'
-import { and, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm'
+import { and, eq, gt, inArray, lt, ne, or, sql } from 'drizzle-orm'
 import {
   DEFAULT_SETTINGS,
   GITHUB_EVENTS,
@@ -244,8 +244,9 @@ export async function markEventProcessed(
 }
 
 /**
- * Upserts the branch a push touched. Returns null when there is nothing to
- * sync: a non-branch ref, a branch deletion, or an unknown repository.
+ * Upserts the branch a push touched, or retires it if the push deleted it.
+ * Returns null when there is nothing to sync: a non-branch ref, a branch
+ * deletion (once cleanup below has run), or an unknown repository.
  *
  * The processor enqueued branch-sync and (for non-default branches) overlap
  * detection here. Both are now the workflow's job, which is what `isDefault`
@@ -270,8 +271,44 @@ export async function upsertBranch(deliveryId: string): Promise<{
     return null
   }
 
-  // Skip branch deletions (handled synchronously when the webhook arrives)
+  // A branch deletion push carries no tree to sync. It does carry state to
+  // retire: the old Fastify route did this inline, synchronously, in the
+  // request handler (apps/api/src/routes/webhooks.ts). That code is gone -
+  // this step is now the only place a deletion is ever acted on - so the
+  // cleanup has to happen here, not merely be skipped.
   if (isBranchDeletion(parsed.after)) {
+    const repo = await db.query.repositories.findFirst({
+      where: eq(repositories.githubId, parsed.repository.id),
+    })
+
+    if (repo) {
+      const branch = await db.query.branches.findFirst({
+        where: and(eq(branches.repositoryId, repo.id), eq(branches.name, branchName)),
+      })
+
+      if (branch) {
+        await db.delete(branchFiles).where(eq(branchFiles.branchId, branch.id))
+
+        // Any overlap naming this branch on either side no longer refers to
+        // anything that exists on GitHub. Resolve it the same way
+        // pruneStaleBranches does for time-pruned branches, rather than
+        // leaving it active and pointing at a deleted branch.
+        await db
+          .update(overlaps)
+          .set({
+            status: 'resolved',
+            resolvedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            or(eq(overlaps.sourceBranchId, branch.id), eq(overlaps.targetBranchId, branch.id))
+          )
+
+        await db.delete(branches).where(eq(branches.id, branch.id))
+        console.log(`Cleaned up deleted branch: ${branchName} in ${repo.fullName}`)
+      }
+    }
+
     return null
   }
 
