@@ -3,8 +3,10 @@ import { json } from '@tanstack/react-start'
 import { db, overlaps } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { repositoryIdParamSchema } from '@overlap/shared'
+import { start } from 'workflow/api'
 import { requireUser } from '../../lib/auth'
 import { requireRepoAccess } from '../../lib/repo-access'
+import { testNotifyWorkflow } from '../../workflows/test-notify'
 
 export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/test-notify')({
   server: {
@@ -33,15 +35,19 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/
           }
 
           // The original Fastify handler queued this via BullMQ
-          // (fastify.queues.pushNotification.add(...)). That queue does not
-          // exist in this app: push dispatch becomes the "sendPush" workflow
-          // step ported in a later task of this migration. Until that step
-          // and its trigger exist, this dev-only endpoint cannot actually
-          // send a notification.
-          return json(
-            { success: false, message: 'Push notification dispatch not yet wired up' },
-            { status: 501 }
-          )
+          // (fastify.queues.pushNotification.add(...)). The replacement is a
+          // durable run of the "sendPush" step.
+          const run = await start(testNotifyWorkflow, [
+            id,
+            overlapId,
+            overlap.targetBranchId,
+          ])
+
+          return json({
+            success: true,
+            message: 'Test notification queued',
+            runId: run.runId,
+          })
         } catch (res) {
           if (res instanceof Response) return res
           throw res
