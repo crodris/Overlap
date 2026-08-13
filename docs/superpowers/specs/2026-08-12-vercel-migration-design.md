@@ -301,7 +301,51 @@ Vercel Pro supports minute-level cron granularity, so the existing six-hour sche
 ### Database
 
 A new Supabase project on the existing paid plan.
-`prod_dump.sql` provides the migration path.
+
+#### No data is migrated
+
+`prod_dump.sql` is not restored.
+The schema is created by running `pnpm db:migrate` against the empty Supabase project, and the application repopulates itself.
+
+This is possible because almost the entire database is a materialized cache of GitHub state rather than authoritative data.
+
+| Table | Rows in prod | Classification |
+| --- | --- | --- |
+| `webhook_events` | 51 | Audit log, deleted after 7 days by `cleanupOldEvents` |
+| `github_app_installations` | 7 | Re-fetched by `syncUserInstallations` on next login |
+| `branches` | 3 | Rebuilt by `syncRepository` |
+| `branch_files` | 2 | Rebuilt by `syncBranchFiles` |
+| `push_subscriptions` | 2 | Authoritative, but re-created by one click per browser |
+| `overlaps`, `overlap_files` | 1, 1 | Recomputed from scratch on every `detectOverlaps` run |
+| `repositories` | 1 | Rebuilt by `syncRepository` |
+| `repository_settings` | 1 | Authoritative, hand-carried if customized from defaults |
+| `user_installations` | 1 | Re-fetched by `syncUserInstallations` |
+| `users` | 1 | Re-created on next sign-in via GitHub OAuth |
+| `organizations`, `pr_alerts`, `pull_requests` | 0 | Empty |
+
+Rebuilding rather than restoring is chosen for three reasons beyond the trivial data volume.
+
+**It reduces the S1 exposure to a hardening task.**
+An empty schema behind an exposed Data API is a configuration to fix before data accumulates, rather than a live exposure of production records.
+S1 remains required regardless.
+
+**It functionally verifies the migration.**
+If a fresh install reconstructs the same repository, branches and overlaps that Railway currently serves, the entire new workflow pipeline has been proven end to end by the act of migrating.
+Restoring a dump would demonstrate nothing about whether the workflows execute correctly.
+
+**It does not carry forward known corruption.**
+The `branch-sync` defect documented above wipes a branch's file index on any transient GitHub failure, after which `detectOverlaps` marks genuine overlaps as `resolved`.
+Production rows may already contain that damage with no record of it.
+A dump preserves the damage.
+A rebuild from GitHub eliminates it.
+
+Manual carry-over is limited to `repository_settings`, and only if `pruningDays` or `ignoredPaths` were changed from the defaults in `packages/shared/src/constants/index.ts:33-45`.
+Check before cutover and re-enter through the UI if so.
+
+`prod_dump.sql` is retained locally as a rollback reference only.
+It is already covered by `.gitignore` and must not be committed.
+
+#### Connection configuration
 
 Changes to `packages/db/src/client.ts`:
 
@@ -340,9 +384,12 @@ They are recorded here because a diff-based security review of the implementatio
 Railway Postgres is reachable only over the Postgres wire protocol.
 A Supabase project additionally exposes PostgREST at `/rest/v1` on the public internet, authenticated by an anon key that is public by design.
 
-Restoring `prod_dump.sql` places every table in the `public` schema with no row-level security, because none was ever needed.
+Running `pnpm db:migrate` places every table in the `public` schema with no row-level security, because none was ever needed on Railway.
 The combination of default grants, an exposed Data API, and no RLS makes `users`, `repositories`, `branches`, `overlaps` and `webhook_events` readable by any holder of the anon key.
-`webhook_events` stores complete GitHub payloads, so this is the highest-value target in the database.
+`webhook_events` stores complete GitHub payloads, so it is the highest-value target in the database.
+
+Because no data is migrated (see the Database section), the schema is empty at cutover and this is a hardening task rather than a live exposure.
+It is still required, and must be done before the application begins repopulating the tables, because the window between first sign-in and remembering to close the Data API is exactly when real data appears.
 
 Required, in order of preference:
 
@@ -351,7 +398,7 @@ Required, in order of preference:
 3. Or enable RLS on every table with no policies attached, so access fails closed
 
 The application connects directly over the Postgres protocol through Drizzle and never uses PostgREST, so disabling it costs nothing.
-This must be verified before `prod_dump.sql` is restored, not after.
+This must be verified before the application is pointed at the project, not after.
 
 ### S2. Webhook signature verification ordering
 
@@ -445,15 +492,20 @@ Railway stays running and untouched through step 6.
 Rollback at any point before step 7 is repointing a single URL.
 
 1. Create the Supabase project.
-   Disable the Data API for the `public` schema per S1 **before** restoring any data.
-   Then restore `prod_dump.sql` and verify row counts against production.
-   Confirm from outside the network that `/rest/v1` returns no table data using the anon key.
-2. Deploy the migrated code to a Vercel preview deployment
-3. Create a second GitHub App pointed at the preview URL
-4. Install it on a throwaway repository and verify the full path: push a commit, open a pull request, confirm the check run appears and the push notification arrives
-5. Flip the production GitHub App webhook URL and OAuth callback URL to the Vercel domain
-6. Observe a real production delivery complete end to end
-7. Tear down the Railway project
+   Disable the Data API for the `public` schema per S1.
+   Run `pnpm db:migrate` to create the schema.
+   Restore no data.
+   Confirm from outside the network that `/rest/v1` returns no table data when presented with the anon key.
+2. Record the current `repository_settings` row from Railway if it differs from the defaults, for manual re-entry later
+3. Deploy the migrated code to a Vercel preview deployment
+4. Create a second GitHub App pointed at the preview URL
+5. Install it on a throwaway repository and verify the full path: push a commit, open a pull request, confirm the check run appears and the push notification arrives
+6. Flip the production GitHub App webhook URL and OAuth callback URL to the Vercel domain
+7. Sign in, reinstall the App on the real repository, and confirm the pipeline reconstructs its branches and overlaps.
+   Compare against what Railway is still serving.
+   This comparison is the acceptance test for the whole migration.
+8. Re-enter `repository_settings` if step 2 recorded a difference, and re-enable browser notifications
+9. Tear down the Railway project
 
 ## Out of scope
 
