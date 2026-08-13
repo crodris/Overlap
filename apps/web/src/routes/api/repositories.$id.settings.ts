@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, repositorySettings } from '@overlap/db'
 import { eq } from 'drizzle-orm'
 import { repositoryIdParamSchema, repositorySettingsUpdateSchema } from '@overlap/shared'
@@ -27,7 +26,7 @@ export const Route = createFileRoute('/api/repositories/$id/settings')({
             .where(eq(repositorySettings.repositoryId, id))
             .returning()
 
-          return json(updated)
+          return Response.json(updated)
         } catch (res) {
           if (res instanceof Response) return res
           throw res

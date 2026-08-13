@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { start } from 'workflow/api'
 import { isAuthorizedCron } from '../../../lib/cron-auth'
 import { pruneBranchesWorkflow } from '../../../workflows/maintenance'
@@ -14,12 +13,12 @@ export const Route = createFileRoute('/api/cron/prune-branches')({
     handlers: {
       GET: async ({ request }) => {
         if (!isAuthorizedCron(request)) {
-          return json({ error: 'Unauthorized' }, { status: 401 })
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         const run = await start(pruneBranchesWorkflow, [])
 
-        return json({ success: true, runId: run.runId })
+        return Response.json({ success: true, runId: run.runId })
       },
     },
   },

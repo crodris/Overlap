@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, repositories } from '@overlap/db'
 import { eq } from 'drizzle-orm'
 import { repositoryIdParamSchema, diffQuerySchema } from '@overlap/shared'
@@ -26,7 +25,7 @@ export const Route = createFileRoute('/api/repositories/$id/diffs')({
           })
 
           if (!repoWithInstallation?.installation) {
-            return json({ error: 'Installation not found' }, { status: 500 })
+            return Response.json({ error: 'Installation not found' }, { status: 500 })
           }
 
           const [owner, name] = repoWithInstallation.fullName.split('/')
@@ -41,11 +40,11 @@ export const Route = createFileRoute('/api/repositories/$id/diffs')({
               head
             )
 
-            return json({ files: diffs })
+            return Response.json({ files: diffs })
           } catch (error: unknown) {
             const err = error as { status?: number; message?: string }
             if (err.status === 404) {
-              return json({ error: 'Branch no longer exists' }, { status: 404 })
+              return Response.json({ error: 'Branch no longer exists' }, { status: 404 })
             }
             throw error
           }

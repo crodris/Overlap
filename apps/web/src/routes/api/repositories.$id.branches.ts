@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, branches } from '@overlap/db'
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { repositoryIdParamSchema, branchQuerySchema } from '@overlap/shared'
@@ -40,7 +39,7 @@ export const Route = createFileRoute('/api/repositories/$id/branches')({
             offset: (page - 1) * limit,
           })
 
-          return json(branchList)
+          return Response.json(branchList)
         } catch (res) {
           if (res instanceof Response) return res
           throw res

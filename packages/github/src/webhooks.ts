@@ -116,7 +116,7 @@ export function formatOverlapComment(
   }
 
   comment += `---\n`
-  comment += `*Overlap detected by [Overlap](https://overlap.dev) — coordinate early to avoid merge conflicts.*`
+  comment += `*Overlap detected by [Overlap](https://overlap.dev) - coordinate early to avoid merge conflicts.*`
 
   return comment
 }

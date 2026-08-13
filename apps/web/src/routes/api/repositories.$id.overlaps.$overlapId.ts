@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, overlaps } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { repositoryIdParamSchema, overlapUpdateSchema } from '@overlap/shared'
@@ -24,7 +23,7 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId'
           })
 
           if (!overlap) {
-            return json({ error: 'Overlap not found' }, { status: 404 })
+            return Response.json({ error: 'Overlap not found' }, { status: 404 })
           }
 
           const [updated] = await db
@@ -37,7 +36,7 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId'
             .where(eq(overlaps.id, overlapId))
             .returning()
 
-          return json(updated)
+          return Response.json(updated)
         } catch (res) {
           if (res instanceof Response) return res
           throw res

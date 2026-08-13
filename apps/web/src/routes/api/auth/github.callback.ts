@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, users, userInstallations } from '@overlap/db'
 import { eq } from 'drizzle-orm'
 import { githubOAuthCallbackSchema } from '@overlap/shared'
@@ -33,7 +32,7 @@ export const Route = createFileRoute('/api/auth/github/callback')({
           state: url.searchParams.get('state') ?? undefined,
         })
 
-        // Verify state (CSRF protection) — always enforced. The state cookie is
+        // Verify state (CSRF protection) - always enforced. The state cookie is
         // itself a signed JWT (per spec S7), so verification checks integrity,
         // not merely presence.
         let stateClaim: unknown
@@ -43,10 +42,10 @@ export const Route = createFileRoute('/api/auth/github/callback')({
           })
           stateClaim = payload.state
         } catch {
-          return json({ error: 'Invalid OAuth state' }, { status: 400 })
+          return Response.json({ error: 'Invalid OAuth state' }, { status: 400 })
         }
         if (typeof stateClaim !== 'string' || stateClaim !== state) {
-          return json({ error: 'Invalid OAuth state' }, { status: 400 })
+          return Response.json({ error: 'Invalid OAuth state' }, { status: 400 })
         }
 
         // Exchange code for access token
@@ -69,7 +68,7 @@ export const Route = createFileRoute('/api/auth/github/callback')({
         }
 
         if (!tokenData.access_token) {
-          return json({ error: 'Failed to exchange code for token' }, { status: 400 })
+          return Response.json({ error: 'Failed to exchange code for token' }, { status: 400 })
         }
 
         // Fetch user profile

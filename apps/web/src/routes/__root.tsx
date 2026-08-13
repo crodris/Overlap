@@ -76,12 +76,12 @@ function AppLayout() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop sidebar — hidden on mobile */}
+      {/* Desktop sidebar - hidden on mobile */}
       <div className="hidden md:block">
         <DesktopSidebar />
       </div>
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Mobile header — shown only on mobile */}
+        {/* Mobile header - shown only on mobile */}
         <MobileHeader />
         <main className="flex-1 overflow-auto">
           <Outlet />

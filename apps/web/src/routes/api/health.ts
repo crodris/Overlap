@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db } from '@overlap/db'
 import { sql } from 'drizzle-orm'
 
@@ -15,7 +14,7 @@ export const Route = createFileRoute('/api/health')({
           database = false
         }
 
-        return json(
+        return Response.json(
           {
             status: database ? 'ready' : 'not ready',
             checks: { database },

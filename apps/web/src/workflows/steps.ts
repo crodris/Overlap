@@ -237,7 +237,7 @@ export async function markEventProcessed(
 
   await db
     .update(webhookEvents)
-    .set(error ? { error } : { processedAt: new Date() })
+    .set(error !== undefined ? { error } : { processedAt: new Date() })
     .where(eq(webhookEvents.deliveryId, deliveryId))
 
   return { deliveryId }

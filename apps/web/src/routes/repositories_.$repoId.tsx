@@ -343,7 +343,7 @@ function OverlapCard({ overlap, repoId, defaultBranch, userGithubId, onResolve, 
         </div>
       </div>
 
-      {/* Inline diff panel — side by side */}
+      {/* Inline diff panel - side by side */}
       {selectedFile && (
         <div className="rounded-lg border overflow-hidden">
           <div className="flex items-center justify-between bg-muted/50 px-3 py-2 border-b">

@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, overlaps } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { repositoryIdParamSchema } from '@overlap/shared'
@@ -17,7 +16,7 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/
           const user = await requireUser(request)
 
           if (process.env.NODE_ENV === 'production') {
-            return json({ error: 'Not found' }, { status: 404 })
+            return Response.json({ error: 'Not found' }, { status: 404 })
           }
 
           const { id } = repositoryIdParamSchema.parse(params)
@@ -31,7 +30,7 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/
           })
 
           if (!overlap) {
-            return json({ error: 'Overlap not found' }, { status: 404 })
+            return Response.json({ error: 'Overlap not found' }, { status: 404 })
           }
 
           // The original Fastify handler queued this via BullMQ
@@ -43,7 +42,7 @@ export const Route = createFileRoute('/api/repositories/$id/overlaps/$overlapId/
             overlap.targetBranchId,
           ])
 
-          return json({
+          return Response.json({
             success: true,
             message: 'Test notification queued',
             runId: run.runId,

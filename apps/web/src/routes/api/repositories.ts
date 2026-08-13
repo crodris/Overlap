@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, repositories, branches, overlaps } from '@overlap/db'
 import { eq, and, desc, count, inArray } from 'drizzle-orm'
 import { requireUser } from '../../lib/auth'
@@ -15,7 +14,7 @@ export const Route = createFileRoute('/api/repositories')({
           const installationIds = await getUserInstallationIds(user.id)
 
           if (installationIds.length === 0) {
-            return json([])
+            return Response.json([])
           }
 
           const repos = await db.query.repositories.findMany({
@@ -56,7 +55,7 @@ export const Route = createFileRoute('/api/repositories')({
             })
           )
 
-          return json(results)
+          return Response.json(results)
         } catch (res) {
           if (res instanceof Response) return res
           throw res

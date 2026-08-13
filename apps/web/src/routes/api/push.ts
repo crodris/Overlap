@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { db, pushSubscriptions } from '@overlap/db'
 import { eq, and } from 'drizzle-orm'
 import { requireUser } from '../../lib/auth'
@@ -42,7 +41,7 @@ export const Route = createFileRoute('/api/push')({
           }
 
           if (!isAllowedPushEndpoint(endpoint)) {
-            return json({ error: 'Invalid push endpoint' }, { status: 400 })
+            return Response.json({ error: 'Invalid push endpoint' }, { status: 400 })
           }
 
           const MAX_SUBSCRIPTIONS_PER_USER = 20
@@ -54,7 +53,7 @@ export const Route = createFileRoute('/api/push')({
           const isKnownEndpoint = existing.some((s) => s.endpoint === endpoint)
 
           if (!isKnownEndpoint && existing.length >= MAX_SUBSCRIPTIONS_PER_USER) {
-            return json({ error: 'Subscription limit reached' }, { status: 429 })
+            return Response.json({ error: 'Subscription limit reached' }, { status: 429 })
           }
 
           await db
@@ -73,7 +72,7 @@ export const Route = createFileRoute('/api/push')({
               },
             })
 
-          return json({ success: true })
+          return Response.json({ success: true })
         } catch (res) {
           if (res instanceof Response) return res
           throw res
@@ -91,7 +90,7 @@ export const Route = createFileRoute('/api/push')({
               and(eq(pushSubscriptions.userId, user.id), eq(pushSubscriptions.endpoint, endpoint))
             )
 
-          return json({ success: true })
+          return Response.json({ success: true })
         } catch (res) {
           if (res instanceof Response) return res
           throw res
