@@ -1,11 +1,28 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { isSignupAllowed } from '../signup-gate'
 
-const originalNodeEnv = process.env.NODE_ENV
+const original: Record<string, string | undefined> = {
+  NODE_ENV: process.env.NODE_ENV,
+  ALLOWED_GITHUB_USERS: process.env.ALLOWED_GITHUB_USERS,
+}
+
+// Assigning `undefined` to process.env stores the literal string "undefined",
+// so an originally-absent variable has to be deleted rather than reassigned.
+function restore(key: string) {
+  const value = original[key]
+  if (value === undefined) delete process.env[key]
+  else process.env[key] = value
+}
+
+// Start from a known-empty allowlist so an ambient ALLOWED_GITHUB_USERS in the
+// developer's shell cannot change what these tests assert.
+beforeEach(() => {
+  delete process.env.ALLOWED_GITHUB_USERS
+})
 
 afterEach(() => {
-  delete process.env.ALLOWED_GITHUB_USERS
-  process.env.NODE_ENV = originalNodeEnv
+  restore('ALLOWED_GITHUB_USERS')
+  restore('NODE_ENV')
 })
 
 describe('isSignupAllowed', () => {
