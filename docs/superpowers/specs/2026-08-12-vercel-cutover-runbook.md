@@ -2,7 +2,17 @@
 
 Date: 2026-08-12
 Companion to: `2026-08-12-vercel-migration-design.md`
-Status: code complete and reviewed; these steps are not yet done
+Status: COMPLETE. Cutover performed 2026-08-19; production runs on Vercel + Neon.
+
+Verified live at https://overlap-bice.vercel.app:
+- health 200 with database reachable through the Neon pooler
+- both crons registered (`vercel crons ls`)
+- sign-in populates users, installations and repositories from GitHub
+- two branches touching one file produce an overlap (severity low, status active)
+- deleting those branches removes their rows and resolves the overlap
+- 9 webhook deliveries processed, 0 errors
+
+The steps below are retained as the record of what was done and why.
 
 All code for the migration is merged on `feat/vercel-migration`.
 Everything in this document is operational work on live accounts, which is why it was not automated.
