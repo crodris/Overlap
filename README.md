@@ -11,6 +11,8 @@
 
 ---
 
+![The Overlap dashboard: active branches in a repository, each flagged with its overlap count, and the detected file conflicts between branch pairs](docs/media/dashboard.jpg)
+
 ## The problem
 
 Modern teams run parallel development hard: multiple developers, plus AI coding agents, each pushing frequent commits on their own branches.
@@ -32,21 +34,26 @@ Overlap surfaces the collisions automatically without requiring any change to ho
 4. Each overlap gets a severity (`low`, `medium`, `high`, `critical`) based on how much the branches collide.
 5. Feedback goes out through GitHub-native channels:
    - a comment on affected pull requests listing the overlapping branches and files
-   - a non-blocking check run that appears alongside CI (never fails your build)
+   - a check run alongside CI: neutral for low and medium severity, failing for high and critical (it never blocks merging unless you mark it required in branch protection)
    - an optional browser push notification
    - the dashboard, where overlaps can be inspected, resolved, or ignored
+
+![An Overlap check run on a pull request: three branches with overlapping changes, each listed with its file count and severity](docs/media/check-run.jpg)
 
 Alerts are informational and deduplicated: one notification per PR unless the severity increases, and nothing fires during the initial sync of a freshly connected repository.
 
 ## Features
 
 - **Real-time detection** - overlaps appear as soon as changes are pushed, not at PR time
+- **Side-by-side diffs** - see exactly what each branch changed in a contested file, both diffed against the default branch
 - **GitHub-native feedback** - PR comments and check runs, no new tool to watch
 - **Dashboard** - active branches, current overlaps, and recent activity per repository
 - **Per-repository settings** - ignored paths (glob patterns), branch pruning window, notification toggles
 - **Web push notifications** - opt-in browser notifications for new or escalating overlaps
 - **Stale branch pruning** - branches with no activity inside the pruning window (default 14 days) drop out of detection automatically
 - **Sign-up allowlist** - gate your instance to specific GitHub accounts, so a public deployment stays private
+
+![Expanding an overlap shows the contested file diffed side by side: what each branch changed relative to the default branch](docs/media/overlap-diff.jpg)
 
 ## Architecture
 
