@@ -78,8 +78,19 @@ Rooting the project at the repository root would point Vercel at a path that doe
 Because Vercel reads `vercel.json` from the Root Directory, the file was moved to `apps/web/vercel.json`.
 A `vercel.json` left at the repository root would never be read, and **both cron jobs would silently never fire** - no error, branch pruning and event cleanup simply stop happening.
 
-Verify after the first deployment rather than trusting this: `vercel inspect <deployment-url>` should list both cron entries, or check the project's Cron Jobs tab in the dashboard.
-An empty cron list means the file is in the wrong place.
+VERIFIED on 2026-08-19: with Root Directory `apps/web` and the file at `apps/web/vercel.json`, both crons register.
+
+Use `vercel crons ls --scope <team>` to check. It is the authoritative view:
+
+```
+  Path                        Schedule
+  /api/cron/cleanup-events    0 3 * * *
+  /api/cron/prune-branches    0 */6 * * *
+```
+
+Do NOT check with `GET /v1/projects/<project>/crons` on the REST API.
+That endpoint returned `{"crons": []}` for this project while the crons were in fact registered and visible both in the deployment record and to the CLI.
+A false negative there would send you chasing a silent failure that is not happening, or worse, convince you the placement is wrong and prompt you to "fix" something that works.
 
 **Environment variables.** Set everything in `.env.example`, plus:
 
