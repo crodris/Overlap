@@ -6,6 +6,7 @@ import { jwtVerify } from 'jose'
 import { signSession } from '../../../lib/session'
 import { readCookie, buildSessionCookie, buildClearCookie } from '../../../lib/auth'
 import { syncUserInstallations } from '../../../lib/github-oauth'
+import { isSignupAllowed } from '../../../lib/signup-gate'
 
 const clientId = process.env.GITHUB_CLIENT_ID
 const clientSecret = process.env.GITHUB_CLIENT_SECRET
@@ -84,6 +85,18 @@ export const Route = createFileRoute('/api/auth/github/callback')({
           login: string
           email: string | null
           avatar_url: string
+        }
+
+        // Gate first-time sign-ups. Existing users are matched on the immutable
+        // github_id, so an approved user keeps access across a GitHub rename.
+        const existingUser = await db.query.users.findFirst({
+          where: eq(users.githubId, githubUser.id),
+        })
+        if (!existingUser && !isSignupAllowed(githubUser.login)) {
+          const deniedHeaders = new Headers()
+          deniedHeaders.append('set-cookie', buildClearCookie('oauth_state'))
+          deniedHeaders.set('location', `${appUrl}/login?error=signups_closed`)
+          return new Response(null, { status: 302, headers: deniedHeaders })
         }
 
         // Upsert user

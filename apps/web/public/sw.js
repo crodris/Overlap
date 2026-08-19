@@ -12,8 +12,9 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    // PNG, not the SVG favicon: Chrome does not render SVG notification assets.
+    icon: '/icon-192.png',
+    badge: '/badge-96.png',
     data: { url: data.url },
     tag: data.tag || 'overlap-notification',
   }
