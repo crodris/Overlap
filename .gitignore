@@ -39,3 +39,6 @@ prod_dump.sql
 
 # Internal ship-run review transcripts
 .ship-fix-report.md
+# Added by `vercel link`; scoped so .env.example stays tracked
+.env.local
+.env.*.local
