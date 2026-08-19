@@ -2,17 +2,25 @@ import { useState } from 'react'
 import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { GitBranch, Github, Loader2, Shield, Zap, Users, Moon, Sun } from 'lucide-react'
+import { GitBranch, Github, Loader2, Shield, Zap, Users, Moon, Sun, Lock } from 'lucide-react'
 import { useAuth } from '~/hooks/use-auth'
 import { useTheme } from '~/hooks/use-theme'
 
+type LoginSearch = {
+  error?: 'signups_closed'
+}
+
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    error: search.error === 'signups_closed' ? 'signups_closed' : undefined,
+  }),
   component: LoginPage,
 })
 
 function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { error } = Route.useSearch()
 
   const [isRedirecting, setIsRedirecting] = useState(false)
 
@@ -60,6 +68,22 @@ function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {error === 'signups_closed' && (
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3"
+              >
+                <Lock className="h-4 w-4 flex-shrink-0 mt-0.5 text-destructive" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Sign-ups are closed</p>
+                  <p className="text-sm text-muted-foreground">
+                    Overlap is invite-only right now. If you already have an account, sign
+                    in with the GitHub account you registered with.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Button
               onClick={handleGitHubLogin}
               className="w-full h-12 text-base"
