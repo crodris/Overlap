@@ -70,12 +70,16 @@ Copy-pasting that shape into production leaves the app on a direct connection an
 
 ## Vercel
 
-**REQUIRED: check where `vercel.json` needs to live.**
+**Root Directory is `apps/web`, and `vercel.json` lives beside it.**
 
-It currently sits at the repo root and contains only the `crons` array.
-If the project's Root Directory is set to `apps/web`, a repo-root `vercel.json` is never read, and **both cron jobs silently never fire**.
-There is no error; branch pruning and event cleanup simply stop happening.
-Confirm the Root Directory in project settings and move the file into `apps/web/` if that is where the project is rooted.
+This is forced rather than chosen: Nitro's vercel preset emits the Build Output API v3 directory to `apps/web/.vercel/output`, and Vercel resolves `.vercel/output` relative to the Root Directory.
+Rooting the project at the repository root would point Vercel at a path that does not exist.
+
+Because Vercel reads `vercel.json` from the Root Directory, the file was moved to `apps/web/vercel.json`.
+A `vercel.json` left at the repository root would never be read, and **both cron jobs would silently never fire** - no error, branch pruning and event cleanup simply stop happening.
+
+Verify after the first deployment rather than trusting this: `vercel inspect <deployment-url>` should list both cron entries, or check the project's Cron Jobs tab in the dashboard.
+An empty cron list means the file is in the wrong place.
 
 **Environment variables.** Set everything in `.env.example`, plus:
 
