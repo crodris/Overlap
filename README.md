@@ -59,7 +59,7 @@ Alerts are informational and deduplicated: one notification per PR unless the se
 
 Overlap is a pnpm + Turborepo monorepo with a single deployable app.
 
-```
+```text
 apps/
   web/          TanStack Start (React 19, SSR) - UI, API routes, webhooks,
                 durable workflows, and cron handlers in one Vercel deployment
@@ -86,7 +86,7 @@ Webhook deliveries are verified against the App's webhook secret, recorded with 
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 9 (`corepack enable`)
+- pnpm 9 - `corepack enable` on Node 20-24; Node 25+ no longer bundles Corepack, so `npm install -g corepack` first (or install pnpm directly)
 - PostgreSQL 16 (or `docker compose up -d` for a local one)
 - A GitHub account that can create a GitHub App
 
@@ -105,13 +105,15 @@ Create a new GitHub App (Settings -> Developer settings -> GitHub Apps) with:
 
 **Events**: `push`, `pull_request`
 
-**URLs** (replace with your deployment URL, `http://localhost:3000` for local dev)
+**URLs** (replace with your deployment URL)
 
 | Setting | Value |
 | --- | --- |
 | Homepage URL | `https://your-domain.example` |
 | Callback URL | `https://your-domain.example/api/auth/github/callback` |
 | Webhook URL | `https://your-domain.example/api/webhooks/github` |
+
+For local development the Homepage and Callback URLs can use `http://localhost:3000`, but the Webhook URL cannot: GitHub has to reach it over the internet, so point it at a tunnel address (see [Run locally](#3-run-locally)).
 
 Enable **Request user authorization (OAuth) during installation**, generate a **private key**, and set a **webhook secret**.
 
